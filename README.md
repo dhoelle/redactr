@@ -1,8 +1,67 @@
 # cryptr
 
-Keep encrypted secrets alongside plaintext.
+Keep obscured secrets alongside plaintext.
 
-`cryptr` searches for specially wrapped secrets inside a plaintext 
+`cryptr` searches for secret declarations inside
+text, and replaces them with secrets.
+
+## Example (CLI)
+
+```sh
+AES_KEY="xuY6/V0ZE29RtPD3TNWga/EkdU3XYsPtBIk8U4nzZyc=" \
+VAULT_ADDR=http://localhost:7777 \
+VAULT_TOKEN=secret_root_token \
+cryptr decode <<EOF
+{
+    "secret_1": "secret-encrypted:DYeT3hCH1unjeWl9whMhjn/ILcM3r24XaX7xgWO8sOJkvCs=:secret-encrypted",
+    "secret_2": "secret-encrypted:AHgF0qDSX/TmRxxlftMvdnY2LMXRgA4DpFB9jy0/uh8kMXQqyQ==:secret-encrypted",
+    "vault_secret_1": "vault:path/to/kv/secret#my_key:vault",
+    "some_plaintext": "hello world",
+}
+EOF
+```
+Output:
+```sh
+{
+    "secret_1": "hunter2",
+    "secret_2": "swordfish",
+    "vault_secret_1": "bond007",
+    "some_plaintext": "hello world",
+}
+```
+
+Note: this example is formatted in JSON, but `cryptr`
+is agnostic to the content surrounding secrets.
+
+## Example (Go Library)
+
+```go
+package main
+
+import (
+	"fmt"
+	"log"
+
+	"github.com/dhoelle/cryptr"
+)
+
+func main() {
+	c, _ := cryptr.New(
+        // cryptr.FromEnv,
+		cryptr.AESKey("xuY6/V0ZE29RtPD3TNWga/EkdU3XYsPtBIk8U4nzZyc="),
+	)
+
+	plaintext := "foo secret:hunter2:secret baz"
+    encoded, _ := c.EncodeTokens(plaintext)
+    fmt.Println(encoded) // "foo secret-encrypted:DYeT3hCH1unjeWl9whMhjn/ILcM3r24XaX7xgWO8sOJkvCs=:secret-encrypted baz"
+
+    decoded, _ := c.DecodeTokens(encoded)
+    fmt.Println(encoded) // "foo hunter2 baz"
+
+    decoded, _ = c.DecodeTokens(encoded, cryptr.WrapTokens)
+    fmt.Println(encoded) // "foo secret:hunter2:secret baz"
+}
+```
 
 ## Install
 
@@ -65,8 +124,10 @@ Use `cryptr decrypt` to decrypt secrets
 ```sh
 $ KEY="xuY6/V0ZE29RtPD3TNWga/EkdU3XYsPtBIk8U4nzZyc=" ./cryptr decrypt <<EOF
 {
-    "secret_1": "secret-encrypted:DYeT3hCH1unjeWl9whMhjn/ILcM3r24XaX7xgWO8sOJkvCs=:secret-encrypted",
+    "secret_1": "secret-encrypted-aes256:DYeT3hCH1unjeWl9whMhjn/ILcM3r24XaX7xgWO8sOJkvCs=:secret-encrypted",
     "secret_2": "secret-encrypted:AHgF0qDSX/TmRxxlftMvdnY2LMXRgA4DpFB9jy0/uh8kMXQqyQ==:secret-encrypted",
+    "vault_secret_1": "vault:path/to/kv/secret#my_key:vault",
+    "aws_secret_1": "aws-secret:path/to/secret#my_key:aws-secret",
     "a_plaintext_key": "hello world",
 }
 EOF
@@ -79,3 +140,7 @@ Outputs:
     "a_plaintext_key": "hello world",
 }
 ```
+
+
+# Development
+

@@ -1,7 +1,7 @@
-// Package crypto provides simple interfaces for complex crypto.
+// Package aes provides wrappers for AES-GCM encryption and decryption.
 // As of April 2019, the implementation is copied directly from
 // the wonderful https://github.com/gtank/cryptopasta
-package crypto
+package aes
 
 import (
 	"crypto/aes"
@@ -29,18 +29,18 @@ func NewEncryptionKey() (*[32]byte, error) {
 func Encrypt(plaintext []byte, key *[32]byte) (ciphertext []byte, err error) {
 	block, err := aes.NewCipher(key[:])
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create new aes cipher: %v", err)
 	}
 
 	gcm, err := cipher.NewGCM(block)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create new GCM: %v", err)
 	}
 
 	nonce := make([]byte, gcm.NonceSize())
 	_, err = io.ReadFull(rand.Reader, nonce)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read nonce: %v", err)
 	}
 
 	return gcm.Seal(nonce, nonce, plaintext, nil), nil
