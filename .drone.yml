@@ -1,0 +1,33 @@
+# Drone CI configuration. See http://readme.drone.io/
+pipeline:
+  clone:
+    image: plugins/git
+    tags: true
+
+  test:
+    image: golang:1.12
+    commands:
+      - go test -mod=vendor ./...
+
+  build:
+    image: golang:1.12
+    commands:
+      - (cd cmd/cryptr && go build main.go)
+    environment:
+      - GOFLAGS=-mod=vendor
+    when:
+      status: success
+      branch:
+        - master
+        - staging
+        - release
+      event: push
+
+  release:
+    image: goreleaser/goreleaser
+    image: golang:1.12
+    secrets: [github_token]
+    commands:
+      curl -sL https://git.io/goreleaser | bash
+    when:
+      event: tag

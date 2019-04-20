@@ -5,11 +5,28 @@ import (
 	"log"
 	"os"
 
+	"github.com/dhoelle/cryptr"
 	"github.com/dhoelle/cryptr/cli"
 )
 
+var (
+	commit  = "none"
+	date    = "unknown"
+	version = "dev"
+)
+
 func main() {
-	c, err := cli.New()
+	tool, err := cryptr.New(
+		cryptr.AESKey(os.Getenv("AES_KEY")),
+	)
+	must(err, "failed to create cryptr tool")
+
+	c, err := cli.New(
+		tool,
+		cli.Commit(commit),
+		cli.Date(date),
+		cli.Version(version),
+	)
 	must(err, "failed to create CLI")
 	must(c.Run(os.Args), "failed to run")
 }

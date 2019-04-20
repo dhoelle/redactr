@@ -13,5 +13,6 @@ package tools
 //
 
 import (
+	// counterfeiter is used to generate fakes
 	_ "github.com/maxbrunsfeld/counterfeiter/v6"
 )

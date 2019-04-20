@@ -1,26 +1,14 @@
-// cryptopasta - basic cryptography examples
-//
-// Written in 2015 by George Tankersley <george.tankersley@gmail.com>
-//
-// To the extent possible under law, the author(s) have dedicated all copyright
-// and related and neighboring rights to this software to the public domain
-// worldwide. This software is distributed without any warranty.
-//
-// You should have received a copy of the CC0 Public Domain Dedication along
-// with this software. If not, see // <http://creativecommons.org/publicdomain/zero/1.0/>.
-
 package aes
 
 import (
 	"bytes"
 	"crypto/rand"
 	"io"
-	"io/ioutil"
 	"testing"
-
-	"golang.org/x/crypto/nacl/secretbox"
 )
 
+// This test is copied (and then trivially-altered) from
+// https://github.com/gtank/cryptopasta/blob/bc3a108a5776376aa811eea34b93383837994340/encrypt_test.go#L24-L62
 func TestEncryptDecryptGCM(t *testing.T) {
 	randomKey := &[32]byte{}
 	_, err := io.ReadFull(rand.Reader, randomKey[:])
@@ -54,51 +42,9 @@ func TestEncryptDecryptGCM(t *testing.T) {
 		}
 
 		ciphertext[0] ^= 0xff
-		plaintext, err = Decrypt(ciphertext, tt.key)
+		_, err = Decrypt(ciphertext, tt.key)
 		if err == nil {
 			t.Errorf("gcmOpen should not have worked, but did")
 		}
-	}
-}
-
-func BenchmarkAESGCM(b *testing.B) {
-	randomKey := &[32]byte{}
-	_, err := io.ReadFull(rand.Reader, randomKey[:])
-	if err != nil {
-		b.Fatal(err)
-	}
-
-	data, err := ioutil.ReadFile("testdata/big")
-	if err != nil {
-		b.Fatal(err)
-	}
-	b.SetBytes(int64(len(data)))
-
-	for i := 0; i < b.N; i++ {
-		Encrypt(data, randomKey)
-	}
-}
-
-func BenchmarkSecretbox(b *testing.B) {
-	randomKey := &[32]byte{}
-	_, err := io.ReadFull(rand.Reader, randomKey[:])
-	if err != nil {
-		b.Fatal(err)
-	}
-
-	nonce := &[24]byte{}
-	_, err = io.ReadFull(rand.Reader, nonce[:])
-	if err != nil {
-		b.Fatal(err)
-	}
-
-	data, err := ioutil.ReadFile("testdata/big")
-	if err != nil {
-		b.Fatal(err)
-	}
-	b.SetBytes(int64(len(data)))
-
-	for i := 0; i < b.N; i++ {
-		secretbox.Seal(nil, data, nonce, randomKey)
 	}
 }

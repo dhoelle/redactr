@@ -31,16 +31,24 @@ func Test_LookupTokenRE(t *testing.T) {
 			wantPayloads:  []string{"foo/bar#baz", "a/b/c#d"},
 		},
 		{
+			name:          "find tokens within json strings",
+			args:          args{s: `{"foo": "vault:foo/bar#baz"}`},
+			wantEnvelopes: []string{"vault:foo/bar#baz"},
+			wantPayloads:  []string{"foo/bar#baz"},
+		},
+		{
+			name:          "find tokens inside single-quoted strings",
+			args:          args{s: `'vault:foo/bar#baz'`},
+			wantEnvelopes: []string{"vault:foo/bar#baz"},
+			wantPayloads:  []string{"foo/bar#baz"},
+		},
+		{
 			name: "ignore tokens without a key",
 			args: args{s: "vault:foo/bar"},
 		},
 		{
 			name: "ignore tokens without a path",
 			args: args{s: "vault:#baz"},
-		},
-		{
-			name: "ignore tokens that don't start with vault:",
-			args: args{s: "zzzvault:foo/bar/#baz"},
 		},
 		{
 			name: "ignore tokens which span newlines",
@@ -67,20 +75,10 @@ func Test_LookupTokenRE(t *testing.T) {
 				return
 			}
 
-			if !reflect.DeepEqual(tt.wantEnvelopes, envelopes) {
-				t.Errorf("Vault Token RE: want payloads = %v, got %v", tt.wantPayloads, envelopes)
+			if !reflect.DeepEqual(tt.wantPayloads, payloads) {
+				t.Errorf("Vault Token RE: want payloads = %v, got %v", tt.wantPayloads, payloads)
 				return
 			}
-
-			// t.Errorf("UNIMPLEMENTED")
-
-			// gotPath, gotkey := e.extractSecretPath(tt.args.s)
-			// if gotPath != tt.wantPath {
-			// 	t.Errorf("vaultSecretPathExtractor.extractSecretPath() gotPath = %v, want %v", gotPath, tt.wantPath)
-			// }
-			// if gotkey != tt.wantkey {
-			// 	t.Errorf("vaultSecretPathExtractor.extractSecretPath() gotkey = %v, want %v", gotkey, tt.wantkey)
-			// }
 		})
 	}
 }

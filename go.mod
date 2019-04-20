@@ -5,6 +5,7 @@ go 1.12
 require (
 	github.com/coreos/etcd v3.3.12+incompatible // indirect
 	github.com/coreos/go-semver v0.3.0 // indirect
+	github.com/golangci/golangci-lint v1.16.0 // indirect
 	github.com/hashicorp/vault/api v1.0.1
 	github.com/maxbrunsfeld/counterfeiter/v6 v6.0.2 // indirect
 	github.com/mitchellh/go-homedir v1.1.0
@@ -19,5 +20,4 @@ require (
 	golang.org/x/crypto v0.0.0-20190418165655-df01cb2cc480
 	golang.org/x/sys v0.0.0-20190419153524-e8e3143a4f4a // indirect
 	golang.org/x/tools v0.0.0-20190320215829-36c10c0a621f
-	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 )

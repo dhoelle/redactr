@@ -2,38 +2,62 @@ package cryptr
 
 import "fmt"
 
-type ITokenEncoder interface {
-	EncodeTokens(string) (string, error)
-}
+//go:generate gobin -m -run github.com/maxbrunsfeld/counterfeiter/v6 -o ./fakes/token_encoder_decoder.go --fake-name TokenEncoderDecoder . TokenEncoderDecoder
 
-type ITokenDecoder interface {
+// A TokenEncoderDecoder can encode and decode tokens
+type TokenEncoderDecoder interface {
+	EncodeTokens(string) (string, error)
 	DecodeTokens(string, ...DecodeTokensOption) (string, error)
 }
 
+// A DecodeTokensConfig configures a request to decode tokens.
 type DecodeTokensConfig struct {
-	WrapTokens bool
+	wrapTokens bool
 }
 
+// A DecodeTokensOption configures a request to decode tokens.
 type DecodeTokensOption func(*DecodeTokensConfig)
 
+// WrapTokens requests that decoded secrets be wrapped
+// in secret envelopes (ideally in the format
+// understood by the corresponding encoder)
+//
+// For example, a secret decoder might try to decode the token:
+//
+//   secret-encoded:zzz:secret-encoded
+//
+// Assuming "zzz" is an encoded version of "hunter2", then a
+// regular, unwrapped output would be:
+//
+//   hunter2
+//
+// With the WrapTokens option, the output should become:
+//
+//   secret:hunter2:secret
+//
+// This is helpful when a user wants to see a reversible output,
+// such as when users want to rotate secrets or keys.
 func WrapTokens(c *DecodeTokensConfig) {
-	c.WrapTokens = true
+	c.wrapTokens = true
 }
 
-// A TokenEncoder encodes secrets which
-// are embedded within a plaintext.
+// A TokenEncoder looks for secret tokens
+// within text, and encodes them
 type TokenEncoder struct {
 	Encoder Encoder
 	Locator TokenLocator
 	Wrapper TokenWrapper
 }
 
+// A TokenDecoder looks for encoded secret tokens
+// within text, and decodes them
 type TokenDecoder struct {
 	Decoder Decoder
 	Locator TokenLocator
 	Wrapper TokenWrapper
 }
 
+// EncodeTokens looks for secret tokens within text, and encodes them
 func (e *TokenEncoder) EncodeTokens(s string) (string, error) {
 	locations, err := e.Locator.LocateTokens(s)
 	if err != nil {
@@ -60,6 +84,7 @@ func (e *TokenEncoder) EncodeTokens(s string) (string, error) {
 	return s, nil
 }
 
+// DecodeTokens looks for encoded secret tokens within text, and decodes them
 func (d *TokenDecoder) DecodeTokens(s string, opts ...DecodeTokensOption) (string, error) {
 	conf := &DecodeTokensConfig{}
 	for _, o := range opts {
@@ -84,7 +109,7 @@ func (d *TokenDecoder) DecodeTokens(s string, opts ...DecodeTokensOption) (strin
 		}
 
 		ins := encoded
-		if conf.WrapTokens && d.Wrapper != nil {
+		if conf.wrapTokens && d.Wrapper != nil {
 			ins = d.Wrapper.WrapToken(encoded)
 		}
 

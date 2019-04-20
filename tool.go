@@ -3,13 +3,16 @@ package cryptr
 import (
 	"encoding/base64"
 	"fmt"
-	"os"
 	"regexp"
 
 	"github.com/dhoelle/cryptr/aes"
 	"github.com/dhoelle/cryptr/vault"
+	"github.com/hashicorp/vault/api"
 )
 
+// Tool is a "master encoder/decoder". It wraps
+// the combined functionality of cryptr into a
+// simpler interface.
 type Tool struct {
 	SecretDecoder *TokenDecoder
 	VaultDecoder  *TokenDecoder
@@ -17,18 +20,22 @@ type Tool struct {
 	SecretEncoder *TokenEncoder
 }
 
-func New(opts ...NewOption) (*Tool, error) {
-	c := &Config{}
+// New creates a new Tool
+func New(opts ...NewToolOption) (*Tool, error) {
+	c := &NewToolConfig{}
 	for _, o := range opts {
 		o(c)
 	}
 
 	t := &Tool{}
 
-	if c.AESKey != "" {
-		key, err := keyFromString(c.AESKey)
+	//
+	// AES encoding
+	//
+	if c.aesKey != "" {
+		key, err := keyFromString(c.aesKey)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse key: %v", err)
+			return nil, fmt.Errorf("failed to parse AES key: %v", err)
 		}
 
 		t.SecretEncoder = &TokenEncoder{
@@ -44,10 +51,15 @@ func New(opts ...NewOption) (*Tool, error) {
 		}
 	}
 
-	vaultEncoding, err := vault.NewEncoding()
+	//
+	// Vault encoding
+	//
+	vaultClient, err := api.NewClient(api.DefaultConfig())
 	if err != nil {
-		return nil, fmt.Errorf("failed to create Vault encoding: %v", err)
+		return nil, fmt.Errorf("failed to create Vault client: %v", err)
 	}
+	vaultWrapper := &vault.StandardClientWrapper{Client: vaultClient}
+	vaultEncoding := vault.NewEncoding(vaultWrapper)
 	t.VaultDecoder = &TokenDecoder{
 		Locator: &RegexTokenLocator{RE: vault.LookupTokenRE},
 		Decoder: vaultEncoding,
@@ -56,22 +68,22 @@ func New(opts ...NewOption) (*Tool, error) {
 	return t, nil
 }
 
-type Config struct {
-	AESKey string
+// NewToolConfig is used to configure a Tool created by New()
+type NewToolConfig struct {
+	aesKey string
 }
 
-type NewOption func(*Config)
+// NewToolOption configures a Tool on a call to New()
+type NewToolOption func(*NewToolConfig)
 
-func AESKey(key string) NewOption {
-	return func(c *Config) {
-		c.AESKey = key
+// AESKey sets the key used for AES encryption and decryption
+func AESKey(key string) NewToolOption {
+	return func(c *NewToolConfig) {
+		c.aesKey = key
 	}
 }
 
-func FromEnv(c *Config) {
-	c.AESKey = os.Getenv("AES_KEY")
-}
-
+// EncodeTokens encodes all tokens in the string
 func (a *Tool) EncodeTokens(s string) (string, error) {
 	var err error
 
@@ -85,6 +97,7 @@ func (a *Tool) EncodeTokens(s string) (string, error) {
 	return s, nil
 }
 
+// DecodeTokens decodes all tokens in the string
 func (a *Tool) DecodeTokens(s string, opts ...DecodeTokensOption) (string, error) {
 	var err error
 

@@ -5,10 +5,14 @@ import (
 	"fmt"
 )
 
+// An Encoding translates between plaintext
+// secret tokens and AES-encrypted tokens
 type Encoding struct {
 	Key *[32]byte
 }
 
+// Encode returns an AES-256 GCM encrypted,
+// base64-encoded version of the plaintext
 func (e *Encoding) Encode(plaintext string) (string, error) {
 	if e.Key == nil {
 		return "", fmt.Errorf("missing key")
@@ -22,6 +26,8 @@ func (e *Encoding) Encode(plaintext string) (string, error) {
 	return base64.StdEncoding.EncodeToString(ciphertext), nil
 }
 
+// Decode decodes an AES-256 GCM encrypted,
+// base64-encoded secret into plaintext
 func (e *Encoding) Decode(ciphertextBase64 string) (string, error) {
 	if e.Key == nil {
 		return "", fmt.Errorf("missing key")
