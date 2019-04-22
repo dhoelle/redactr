@@ -1,15 +1,15 @@
-# cryptr
+# redactr
 
-`cryptr` enables you to keep obscured secrets alongside plaintext.
+Use `redactr` to obscure secrets alongside plaintext.
 
-`cryptr encode` finds tokens with encodable secrets, and encodes them.
+`redactr redact` finds secrets, and replaces them with redaction tokens.
 
-`cryptr decode` finds tokens with decodable secrets, and decodes them.
+`redactr unredact` finds redaction tokens, and replaces them with secrets.
 
 ## Install
 
 ```sh
-go get github.com/dhoelle/cryptr/cmd/cryptr
+go get github.com/dhoelle/redactr/cmd/redactr
 ```
 
 ## Example (CLI)
@@ -21,10 +21,10 @@ export VAULT_ADDR=http://localhost:8200
 export VAULT_TOKEN=my_token
 ```
 
-Encode some secrets:
+Redact some secrets:
 
 ```sh
-cryptr encode <<EOF
+redactr redact <<EOF
 {
     "aes_secret": "secret:hunter2:secret",
     "not_a_secret": 42,
@@ -41,9 +41,9 @@ Output:
 }
 ```
 
-Decode those secrets:
+Unredact those secrets:
 ```sh
-cryptr decode <<EOF
+redactr unredact <<EOF
 {
     "aes_secret": "secret-aes-256-gcm:DYeT3hCH1unjeWl9whMhjn/ILcM3r24XaX7xgWO8sOJkvCs=:secret-aes-256-gcm",
     "not_a_secret": 42,
@@ -60,12 +60,12 @@ Output:
 }
 ```
 
-By default secrets are decoded without the original secret wrapping,
-but you can add it back with the `-w` flag:
-```
-Decode those secrets:
+By default secrets are unredacted without the original secret wrapping.
+You can add it back with the `-w` flag:
+
+Unredact those secrets:
 ```sh
-cryptr decode -w <<EOF
+redactr unredact -w <<EOF
 {
     "aes_secret": "secret-aes-256-gcm:DYeT3hCH1unjeWl9whMhjn/ILcM3r24XaX7xgWO8sOJkvCs=:secret-aes-256-gcm",
     "not_a_secret": 42,
@@ -82,8 +82,7 @@ Output:
 }
 ```
 
-_Note: these examples use JSON content, but `cryptr`
-is agnostic to the content surrounding secrets_
+_Note: these examples use JSON, but `redactr` is content agnostic_
 
 ## Example (Go Library)
 
@@ -94,29 +93,29 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/dhoelle/cryptr"
+	"github.com/dhoelle/redactr"
 )
 
 func main() {
-	c, _ := cryptr.New(
-		cryptr.AESKey("xuY6/V0ZE29RtPD3TNWga/EkdU3XYsPtBIk8U4nzZyc="),
+	c, _ := redactr.New(
+		redactr.AESKey("xuY6/V0ZE29RtPD3TNWga/EkdU3XYsPtBIk8U4nzZyc="),
 	)
 
 	plaintext := "foo secret:hunter2:secret baz"
-    encoded, _ := c.EncodeTokens(plaintext)
-    fmt.Println(encoded) // "foo secret-encrypted:DYeT3hCH1unjeWl9whMhjn/ILcM3r24XaX7xgWO8sOJkvCs=:secret-encrypted baz"
+    redacted, _ := c.RedactTokens(plaintext)
+    fmt.Println(redacted) // "foo secret-encrypted:DYeT3hCH1unjeWl9whMhjn/ILcM3r24XaX7xgWO8sOJkvCs=:secret-encrypted baz"
 
-    decoded, _ := c.DecodeTokens(encoded)
-    fmt.Println(encoded) // "foo hunter2 baz"
+    unredacted, _ := c.UnredactTokens(redacted)
+    fmt.Println(redacted) // "foo hunter2 baz"
 
-    decoded, _ = c.DecodeTokens(encoded, cryptr.WrapTokens)
-    fmt.Println(encoded) // "foo secret:hunter2:secret baz"
+    unredacted, _ = c.UnredactTokens(redacted, redactr.WrapTokens)
+    fmt.Println(redacted) // "foo secret:hunter2:secret baz"
 }
 ```
 
 ## Supported Secret types
 
-| type            	| unencoded form                        	| encoded form                            	|
+| type            	| unredacted form                        	| redacted form                            	|
 |-----------------	|---------------------------------------	|-----------------------------------------	|
 | local secret    	| secret:*:secret                       	| secret-aes-256-gcm:*:secret-aes-256-gcm 	|
 | vault KV secret 	| vault-secret:path/to/secret#key#value 	| vault:path/to/secret#key                	|
@@ -125,22 +124,22 @@ func main() {
 
 Inline secrets are encrypted with 256-bit AES-GCM.
 
-You must supply a 32-byte key, base64 encoded. You can generate a key with `cryptr key`:
+You must supply a 32-byte key, base64 redacted. You can generate a key with `redactr key`:
 
 ```sh
-$ cryptr key
+$ redactr key
 xuY6/V0ZE29RtPD3TNWga/EkdU3XYsPtBIk8U4nzZyc=
 
 $ export AES_KEY="xuY6/V0ZE29RtPD3TNWga/EkdU3XYsPtBIk8U4nzZyc="
 
-$ cryptr encode "secret:hunter2:secret"
+$ redactr redact "secret:hunter2:secret"
 secret-aes-256-gcm:JOf+CmAfgyCSbesz6zstfUx7gHIuJ/JMeyyf8UqCGvkxjkc=:secret-aes-256-gcm
 
-$ cryptr decode "secret-aes-256-gcm:JOf+CmAfgyCSbesz6zstfUx7gHIuJ/JMeyyf8UqCGvkxjkc=:secret-aes-256-gcm"
+$ redactr unredact "secret-aes-256-gcm:JOf+CmAfgyCSbesz6zstfUx7gHIuJ/JMeyyf8UqCGvkxjkc=:secret-aes-256-gcm"
 hunter2
 
 # Use the -w (--wrap) flag for reversible wrapped input
-$ cryptr decode -w "secret-aes-256-gcm:JOf+CmAfgyCSbesz6zstfUx7gHIuJ/JMeyyf8UqCGvkxjkc=:secret-aes-256-gcm"
+$ redactr unredact -w "secret-aes-256-gcm:JOf+CmAfgyCSbesz6zstfUx7gHIuJ/JMeyyf8UqCGvkxjkc=:secret-aes-256-gcm"
 secret:hunter2:secret
 ```
 
@@ -153,13 +152,13 @@ The vault adapter uses the vault CLI's standard environment variables (see: http
 Assuming vault has been appropriately configured, it can be used like:
 
 ```sh
-$ cryptr encode "vault-secret:secret/dev#my_password#hunter2"
+$ redactr redact "vault-secret:secret/dev#my_password#hunter2"
 vault:secret/dev#my_password
 
-$ cryptr decode "vault:secret/dev#my_password"
+$ redactr unredact "vault:secret/dev#my_password"
 hunter2
 
 # Use the -w (--wrap) flag for reversible wrapped input
-$ cryptr decode -w "vault:secret/dev#my_password"
+$ redactr unredact -w "vault:secret/dev#my_password"
 vault-secret:secret/dev#my_password#hunter2
 ```

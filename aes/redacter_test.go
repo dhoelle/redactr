@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestEncoding_Encode(t *testing.T) {
+func TestRedacter_Redact(t *testing.T) {
 	type fields struct {
 		Key *[32]byte
 	}
@@ -35,19 +35,19 @@ func TestEncoding_Encode(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			e := &Encoding{
+			e := &Redacter{
 				Key: tt.fields.Key,
 			}
-			got, err := e.Encode(tt.args.s)
+			got, err := e.Redact(tt.args.s)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("Encoding.Encode() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Redacter.Redact() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 
 			if tt.wantCiphered != "" {
 				re := regexp.MustCompile(tt.wantCiphered)
 				if !re.MatchString(got) {
-					t.Errorf("Encoding.Encode()ciphertext doesn't match regex\n\tregex: %v\n\t  got: %v", tt.wantCiphered, got)
+					t.Errorf("Redacter.Redact()ciphertext doesn't match regex\n\tregex: %v\n\t  got: %v", tt.wantCiphered, got)
 					return
 				}
 			}
@@ -55,7 +55,7 @@ func TestEncoding_Encode(t *testing.T) {
 	}
 }
 
-func TestEncoding_Decode(t *testing.T) {
+func TestRedacter_Unredact(t *testing.T) {
 	type fields struct {
 		Key *[32]byte
 	}
@@ -101,16 +101,16 @@ func TestEncoding_Decode(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			e := &Encoding{
+			e := &Redacter{
 				Key: tt.fields.Key,
 			}
-			got, err := e.Decode(tt.args.s)
+			got, err := e.Unredact(tt.args.s)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("Encoding.Decode() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Redacter.Unredact() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if got != tt.want {
-				t.Errorf("Encoding.Decode() = %v, want %v", got, tt.want)
+				t.Errorf("Redacter.Unredact() = %v, want %v", got, tt.want)
 			}
 		})
 	}

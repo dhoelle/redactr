@@ -4,7 +4,7 @@ package fakes
 import (
 	"sync"
 
-	"github.com/dhoelle/cryptr"
+	"github.com/dhoelle/redactr"
 )
 
 type TokenWrapper struct {
@@ -111,4 +111,4 @@ func (fake *TokenWrapper) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ cryptr.TokenWrapper = new(TokenWrapper)
+var _ redactr.TokenWrapper = new(TokenWrapper)

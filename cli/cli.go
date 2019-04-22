@@ -8,12 +8,12 @@ import (
 	"os"
 	"strings"
 
-	"github.com/dhoelle/cryptr"
-	"github.com/dhoelle/cryptr/aes"
+	"github.com/dhoelle/redactr"
+	"github.com/dhoelle/redactr/aes"
 	"github.com/urfave/cli"
 )
 
-// CLI provides a command-line interface for cryptr
+// CLI provides a command-line interface for redactr
 type CLI struct {
 	cliApp *cli.App
 }
@@ -33,21 +33,21 @@ type Config struct {
 // A NewOption is used to alter a new CLI
 type NewOption func(*Config)
 
-// Version sets the version of cryptr, as reported by the CLI
+// Version sets the version of redactr, as reported by the CLI
 func Version(v string) NewOption {
 	return func(c *Config) {
 		c.version = v
 	}
 }
 
-// Commit sets the commit of cryptr, as reported by the CLI
+// Commit sets the commit of redactr, as reported by the CLI
 func Commit(v string) NewOption {
 	return func(c *Config) {
 		c.commit = v
 	}
 }
 
-// Date sets the date of cryptr, as reported by the CLI
+// Date sets the date of redactr, as reported by the CLI
 func Date(v string) NewOption {
 	return func(c *Config) {
 		c.date = v
@@ -55,13 +55,14 @@ func Date(v string) NewOption {
 }
 
 // New creates a new CLI
-func New(ted cryptr.TokenEncoderDecoder, opts ...NewOption) (*CLI, error) {
+func New(ted redactr.TokenRedacterUnredacter, opts ...NewOption) (*CLI, error) {
 	conf := &Config{}
 	for _, o := range opts {
 		o(conf)
 	}
 
 	app := cli.NewApp()
+	app.Usage = "keep redacted secrets alongside your plaintext"
 	app.Version = versionString(conf.version, conf.commit, conf.date)
 	app.Commands = []cli.Command{
 		{
@@ -77,20 +78,22 @@ func New(ted cryptr.TokenEncoderDecoder, opts ...NewOption) (*CLI, error) {
 			Action: keygen(os.Stdout),
 		},
 		{
-			Name:   "encode",
-			Usage:  "encode embedded secrets",
-			Action: encode(ted, os.Stdin, os.Stdout),
+			Name:    "redact",
+			Aliases: []string{"r"},
+			Usage:   "redact embedded secrets",
+			Action:  redact(ted, os.Stdin, os.Stdout),
 		},
 		{
-			Name:  "decode",
-			Usage: "decode embedded secrets",
+			Name:    "unredact",
+			Aliases: []string{"u"},
+			Usage:   "unredact embedded secrets",
 			Flags: []cli.Flag{
 				cli.BoolFlag{
 					Name:  "wrap-tokens, w",
-					Usage: "wrap decoded tokens",
+					Usage: "wrap unredacted tokens",
 				},
 			},
-			Action: decode(ted, os.Stdin, os.Stdout),
+			Action: unredact(ted, os.Stdin, os.Stdout),
 		},
 	}
 
@@ -118,7 +121,7 @@ func keygen(out io.Writer) func(*cli.Context) error {
 	}
 }
 
-func encode(ted cryptr.TokenEncoderDecoder, in io.Reader, out io.Writer) func(*cli.Context) error {
+func redact(ted redactr.TokenRedacterUnredacter, in io.Reader, out io.Writer) func(*cli.Context) error {
 	return func(c *cli.Context) error {
 		var input string
 		if c.Args().Present() {
@@ -131,17 +134,17 @@ func encode(ted cryptr.TokenEncoderDecoder, in io.Reader, out io.Writer) func(*c
 			input = string(b)
 		}
 
-		encoded, err := ted.EncodeTokens(input)
+		redacted, err := ted.RedactTokens(input)
 		if err != nil {
-			return fmt.Errorf("failed to encode tokens: %v", err)
+			return fmt.Errorf("failed to redact tokens: %v", err)
 		}
 
-		fmt.Fprintln(out, encoded)
+		fmt.Fprintln(out, redacted)
 		return nil
 	}
 }
 
-func decode(ted cryptr.TokenEncoderDecoder, in io.Reader, out io.Writer) func(*cli.Context) error {
+func unredact(ted redactr.TokenRedacterUnredacter, in io.Reader, out io.Writer) func(*cli.Context) error {
 	return func(c *cli.Context) error {
 		var input string
 		if c.Args().Present() {
@@ -154,17 +157,17 @@ func decode(ted cryptr.TokenEncoderDecoder, in io.Reader, out io.Writer) func(*c
 			input = string(b)
 		}
 
-		var opts []cryptr.DecodeTokensOption
+		var opts []redactr.UnredactTokensOption
 		if c.Bool("wrap-tokens") {
-			opts = append(opts, cryptr.WrapTokens)
+			opts = append(opts, redactr.WrapTokens)
 		}
 
-		decoded, err := ted.DecodeTokens(input, opts...)
+		unredacted, err := ted.UnredactTokens(input, opts...)
 		if err != nil {
-			return fmt.Errorf("failed to decode tokens: %v", err)
+			return fmt.Errorf("failed to unredact tokens: %v", err)
 		}
 
-		fmt.Fprintln(out, decoded)
+		fmt.Fprintln(out, unredacted)
 		return nil
 	}
 }

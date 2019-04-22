@@ -5,10 +5,10 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/dhoelle/cryptr/vault"
+	"github.com/dhoelle/redactr/vault"
 )
 
-func Test_EncodedRE(t *testing.T) {
+func Test_RedactedRE(t *testing.T) {
 	type args struct {
 		s string
 	}
@@ -59,7 +59,7 @@ func Test_EncodedRE(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var envelopes []string
 			var payloads []string
-			matches := vault.EncodedRE.FindAllStringSubmatch(tt.args.s, -1)
+			matches := vault.RedactedRE.FindAllStringSubmatch(tt.args.s, -1)
 			fmt.Printf("DEBUG: matches: %#v\n", matches)
 			for _, m := range matches {
 				if len(m) > 0 {

@@ -1,4 +1,4 @@
-package cryptr
+package redactr
 
 import "regexp"
 

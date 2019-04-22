@@ -2,7 +2,7 @@ package vault
 
 import "regexp"
 
-// EncodedRE matches encoded secret tokens, like:
+// RedactedRE matches redacted secret tokens, like:
 //
 //    vault:path/to/kv/secret#my_key
 //
@@ -10,7 +10,7 @@ import "regexp"
 //
 // The payload (capturing group) is the secret location
 // (in the example above, "path/to/kv/secret#my_key")
-var EncodedRE = regexp.MustCompile(`` +
+var RedactedRE = regexp.MustCompile(`` +
 	// Must start after a word boundary
 	`\b` +
 
@@ -37,7 +37,7 @@ var EncodedRE = regexp.MustCompile(`` +
 	// Must end with a word boundary
 	`\b`)
 
-// UnencodedRE matches encoded secret tokens, like:
+// UnredactedRE matches redacted secret tokens, like:
 //
 //    vault-secret:path/to/kv/secret#my_key#my_value
 //
@@ -45,7 +45,7 @@ var EncodedRE = regexp.MustCompile(`` +
 //
 // The payload (capturing group) is the secret path+key+value
 // (in the example above, "path/to/kv/secret#my_key#my_value")
-var UnencodedRE = regexp.MustCompile(`` +
+var UnredactedRE = regexp.MustCompile(`` +
 	// Must start after a word boundary
 	`\b` +
 

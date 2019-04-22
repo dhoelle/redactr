@@ -5,8 +5,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/dhoelle/cryptr"
-	"github.com/dhoelle/cryptr/cli"
+	"github.com/dhoelle/redactr"
+	"github.com/dhoelle/redactr/cli"
 )
 
 var (
@@ -16,10 +16,10 @@ var (
 )
 
 func main() {
-	tool, err := cryptr.New(
-		cryptr.AESKey(os.Getenv("AES_KEY")),
+	tool, err := redactr.New(
+		redactr.AESKey(os.Getenv("AES_KEY")),
 	)
-	must(err, "failed to create cryptr tool")
+	must(err, "failed to create redactr tool")
 
 	c, err := cli.New(
 		tool,

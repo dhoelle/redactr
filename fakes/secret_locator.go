@@ -4,7 +4,7 @@ package fakes
 import (
 	"sync"
 
-	"github.com/dhoelle/cryptr"
+	"github.com/dhoelle/redactr"
 )
 
 type TokenLocator struct {
@@ -162,4 +162,4 @@ func (fake *TokenLocator) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ cryptr.TokenLocator = new(TokenLocator)
+var _ redactr.TokenLocator = new(TokenLocator)

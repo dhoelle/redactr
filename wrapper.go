@@ -1,4 +1,4 @@
-package cryptr
+package redactr
 
 //go:generate gobin -m -run github.com/maxbrunsfeld/counterfeiter/v6 -o ./fakes/token_wrapper.go --fake-name TokenWrapper . TokenWrapper
 

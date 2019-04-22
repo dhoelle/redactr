@@ -9,34 +9,34 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
-// An Encoding translates between Vault
-// secret declarations and vaulted secrets
-type Encoding struct {
+// A Redacter redacts secrets by storing
+// them in a Hashicorp Vault
+type Redacter struct {
 	client Client
 }
 
-// NewEncoding creates a new Encoding
-func NewEncoding(client Client) *Encoding {
-	return &Encoding{
+// NewRedacter creates a new Redacter
+func NewRedacter(client Client) *Redacter {
+	return &Redacter{
 		client: client,
 	}
 }
 
-// Decode replaces a Vault secret declaration with the
+// Unredact replaces a Vault secret declaration with the
 // target secret.
 //
 // It expects an input like:
 //
 //    path/to/secret#secret_key
 //
-func (e *Encoding) Decode(secretDeclaration string) (string, error) {
+func (r *Redacter) Unredact(secretDeclaration string) (string, error) {
 	ss := strings.Split(secretDeclaration, "#")
 	if len(ss) != 2 {
 		return "", fmt.Errorf("expected secret declaration with two parts, got %v", len(ss))
 	}
 	path, key := ss[0], ss[1]
 
-	secret, err := e.client.ReadSecret(path, key)
+	secret, err := r.client.ReadSecret(path, key)
 	if err != nil {
 		return "", fmt.Errorf("failed to read secret: %v", err)
 	}
@@ -55,20 +55,20 @@ func (e *Encoding) Decode(secretDeclaration string) (string, error) {
 	}
 }
 
-// Encode inserts a declared secret into Vault
+// Redact inserts a declared secret into Vault
 //
 // It expects an input like:
 //
 //    path/to/secret#key#value
 //
-func (e *Encoding) Encode(secretDeclaration string) (string, error) {
+func (r *Redacter) Redact(secretDeclaration string) (string, error) {
 	ss := strings.Split(secretDeclaration, "#")
 	if len(ss) != 3 {
 		return "", fmt.Errorf("expected secret declaration with three parts, got %v", len(ss))
 	}
 	path, key, value := ss[0], ss[1], ss[2]
 
-	err := e.client.WriteSecret(path, key, value)
+	err := r.client.WriteSecret(path, key, value)
 	if err != nil {
 		return "", fmt.Errorf("failed to read secret: %v", err)
 	}

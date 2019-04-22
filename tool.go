@@ -1,24 +1,24 @@
-package cryptr
+package redactr
 
 import (
 	"encoding/base64"
 	"fmt"
 	"regexp"
 
-	"github.com/dhoelle/cryptr/aes"
-	"github.com/dhoelle/cryptr/vault"
+	"github.com/dhoelle/redactr/aes"
+	"github.com/dhoelle/redactr/vault"
 	"github.com/hashicorp/vault/api"
 )
 
-// Tool is a "master encoder/decoder". It wraps
-// the combined functionality of cryptr into a
+// Tool is a "master redacter/unredacter". It wraps
+// the combined functionality of redactr into a
 // simpler interface.
 type Tool struct {
-	SecretDecoder *TokenDecoder
-	VaultDecoder  *TokenDecoder
+	SecretUnredacter *TokenUnredacter
+	VaultUnredacter  *TokenUnredacter
 
-	SecretEncoder *TokenEncoder
-	VaultEncoder  *TokenEncoder
+	SecretRedacter *TokenRedacter
+	VaultRedacter  *TokenRedacter
 }
 
 // New creates a new Tool
@@ -31,7 +31,7 @@ func New(opts ...NewToolOption) (*Tool, error) {
 	t := &Tool{}
 
 	//
-	// AES encoding
+	// AES redacter
 	//
 	if c.aesKey != "" {
 		key, err := keyFromString(c.aesKey)
@@ -39,37 +39,37 @@ func New(opts ...NewToolOption) (*Tool, error) {
 			return nil, fmt.Errorf("failed to parse AES key: %v", err)
 		}
 
-		t.SecretEncoder = &TokenEncoder{
-			Locator: &RegexTokenLocator{RE: regexp.MustCompile(`(?U)secret:(.+):secret`)},
-			Encoder: &aes.Encoding{Key: key},
-			Wrapper: &StringWrapper{Before: "secret-aes-256-gcm:", After: ":secret-aes-256-gcm"},
+		t.SecretRedacter = &TokenRedacter{
+			Locator:  &RegexTokenLocator{RE: regexp.MustCompile(`(?U)secret:(.+):secret`)},
+			Redacter: &aes.Redacter{Key: key},
+			Wrapper:  &StringWrapper{Before: "secret-aes-256-gcm:", After: ":secret-aes-256-gcm"},
 		}
 
-		t.SecretDecoder = &TokenDecoder{
-			Locator: &RegexTokenLocator{RE: regexp.MustCompile(`(?U)secret-aes-256-gcm:(.+):secret-aes-256-gcm`)},
-			Decoder: &aes.Encoding{Key: key},
-			Wrapper: &StringWrapper{Before: "secret:", After: ":secret"},
+		t.SecretUnredacter = &TokenUnredacter{
+			Locator:    &RegexTokenLocator{RE: regexp.MustCompile(`(?U)secret-aes-256-gcm:(.+):secret-aes-256-gcm`)},
+			Unredacter: &aes.Redacter{Key: key},
+			Wrapper:    &StringWrapper{Before: "secret:", After: ":secret"},
 		}
 	}
 
 	//
-	// Vault encoding
+	// Vault redacter
 	//
 	vaultClient, err := api.NewClient(api.DefaultConfig())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Vault client: %v", err)
 	}
 	vaultWrapper := &vault.StandardClientWrapper{Client: vaultClient}
-	vaultEncoding := vault.NewEncoding(vaultWrapper)
-	t.VaultDecoder = &TokenDecoder{
-		Locator: &RegexTokenLocator{RE: vault.EncodedRE},
-		Decoder: vaultEncoding,
-		Wrapper: &vault.TokenWrapper{Before: "vault-secret:"},
+	vaultRedacter := vault.NewRedacter(vaultWrapper)
+	t.VaultUnredacter = &TokenUnredacter{
+		Locator:    &RegexTokenLocator{RE: vault.RedactedRE},
+		Unredacter: vaultRedacter,
+		Wrapper:    &vault.TokenWrapper{Before: "vault-secret:"},
 	}
-	t.VaultEncoder = &TokenEncoder{
-		Locator: &RegexTokenLocator{RE: vault.UnencodedRE},
-		Encoder: vaultEncoding,
-		Wrapper: &StringWrapper{Before: "vault:"},
+	t.VaultRedacter = &TokenRedacter{
+		Locator:  &RegexTokenLocator{RE: vault.UnredactedRE},
+		Redacter: vaultRedacter,
+		Wrapper:  &StringWrapper{Before: "vault:"},
 	}
 
 	return t, nil
@@ -90,42 +90,42 @@ func AESKey(key string) NewToolOption {
 	}
 }
 
-// EncodeTokens encodes all tokens in the string
-func (a *Tool) EncodeTokens(s string) (string, error) {
+// RedactTokens redacts all tokens in the string
+func (a *Tool) RedactTokens(s string) (string, error) {
 	var err error
 
-	if a.SecretEncoder != nil {
-		s, err = a.SecretEncoder.EncodeTokens(s)
+	if a.SecretRedacter != nil {
+		s, err = a.SecretRedacter.RedactTokens(s)
 		if err != nil {
-			return "", fmt.Errorf("secret encoder failed: %v", err)
+			return "", fmt.Errorf("secret redacter failed: %v", err)
 		}
 	}
 
-	if a.VaultEncoder != nil {
-		s, err = a.VaultEncoder.EncodeTokens(s)
+	if a.VaultRedacter != nil {
+		s, err = a.VaultRedacter.RedactTokens(s)
 		if err != nil {
-			return "", fmt.Errorf("vault encoder failed: %v", err)
+			return "", fmt.Errorf("vault redacter failed: %v", err)
 		}
 	}
 
 	return s, nil
 }
 
-// DecodeTokens decodes all tokens in the string
-func (a *Tool) DecodeTokens(s string, opts ...DecodeTokensOption) (string, error) {
+// UnredactTokens unredacts all tokens in the string
+func (a *Tool) UnredactTokens(s string, opts ...UnredactTokensOption) (string, error) {
 	var err error
 
-	if a.SecretDecoder != nil {
-		s, err = a.SecretDecoder.DecodeTokens(s, opts...)
+	if a.SecretUnredacter != nil {
+		s, err = a.SecretUnredacter.UnredactTokens(s, opts...)
 		if err != nil {
-			return "", fmt.Errorf("secret decoder failed: %v", err)
+			return "", fmt.Errorf("secret unredacter failed: %v", err)
 		}
 	}
 
-	if a.VaultDecoder != nil {
-		s, err = a.VaultDecoder.DecodeTokens(s, opts...)
+	if a.VaultUnredacter != nil {
+		s, err = a.VaultUnredacter.UnredactTokens(s, opts...)
 		if err != nil {
-			return "", fmt.Errorf("vault decoder failed: %v", err)
+			return "", fmt.Errorf("vault unredacter failed: %v", err)
 		}
 	}
 
@@ -133,10 +133,10 @@ func (a *Tool) DecodeTokens(s string, opts ...DecodeTokensOption) (string, error
 }
 
 func keyFromString(s string) (*[32]byte, error) {
-	// keys should be base64 encoded
+	// keys should be base64 redacted
 	d, err := base64.StdEncoding.DecodeString(s)
 	if err != nil {
-		return nil, fmt.Errorf("could not base64-decode key: %v", err)
+		return nil, fmt.Errorf("could not base64-unredact key: %v", err)
 	}
 
 	if len(d) != 32 {

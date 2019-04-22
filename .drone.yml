@@ -12,7 +12,7 @@ pipeline:
   build:
     image: golang:1.12
     commands:
-      - (cd cmd/cryptr && go build main.go)
+      - (cd cmd/redactr && go build main.go)
     environment:
       - GOFLAGS=-mod=vendor
     when:
