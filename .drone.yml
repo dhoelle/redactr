@@ -1,34 +1,37 @@
 # Drone CI configuration. See http://readme.drone.io/
-pipeline:
-  clone:
-    image: plugins/git
-    tags: true
+kind: pipeline
+name: default
 
-  test:
-    image: golang:1.12
-    commands:
-      - go test -mod=vendor ./...
+steps:
+  - clone:
+      image: plugins/git
+      tags: true
 
-  build:
-    image: golang:1.12
-    commands:
-      - (cd cmd/redactr && go build main.go)
-    environment:
-      - GOFLAGS=-mod=vendor
-    when:
-      status: success
-      branch:
-        - master
-        - staging
-        - release
-      event: push
+  - test:
+      image: golang:1.12
+      commands:
+        - go test -mod=vendor ./...
 
-  release:
-    image: goreleaser/goreleaser
-    secrets: [github_token]
-    commands:
-      release
-    environment:
-      - GITHUB_TOKEN=${GITHUB_TOKEN}
-    when:
-      event: tag
+  - build:
+      image: golang:1.12
+      commands:
+        - (cd cmd/redactr && go build main.go)
+      environment:
+        - GOFLAGS=-mod=vendor
+      when:
+        status: success
+        branch:
+          - master
+          - staging
+          - release
+        event: push
+
+  - release:
+      image: goreleaser/goreleaser
+      secrets: [github_token]
+      commands:
+        release
+      environment:
+        - GITHUB_TOKEN=${GITHUB_TOKEN}
+      when:
+        event: tag
