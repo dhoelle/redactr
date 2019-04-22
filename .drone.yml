@@ -25,9 +25,10 @@ pipeline:
 
   release:
     image: goreleaser/goreleaser
-    image: golang:1.12
     secrets: [github_token]
     commands:
-      curl -sL https://git.io/goreleaser | bash
+      release
+    environment:
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
     when:
       event: tag
