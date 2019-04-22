@@ -8,10 +8,12 @@ import (
 )
 
 type TokenWrapper struct {
-	WrapTokenStub        func(string) string
+	WrapTokenStub        func(string, string, string) string
 	wrapTokenMutex       sync.RWMutex
 	wrapTokenArgsForCall []struct {
 		arg1 string
+		arg2 string
+		arg3 string
 	}
 	wrapTokenReturns struct {
 		result1 string
@@ -23,16 +25,18 @@ type TokenWrapper struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *TokenWrapper) WrapToken(arg1 string) string {
+func (fake *TokenWrapper) WrapToken(arg1 string, arg2 string, arg3 string) string {
 	fake.wrapTokenMutex.Lock()
 	ret, specificReturn := fake.wrapTokenReturnsOnCall[len(fake.wrapTokenArgsForCall)]
 	fake.wrapTokenArgsForCall = append(fake.wrapTokenArgsForCall, struct {
 		arg1 string
-	}{arg1})
-	fake.recordInvocation("WrapToken", []interface{}{arg1})
+		arg2 string
+		arg3 string
+	}{arg1, arg2, arg3})
+	fake.recordInvocation("WrapToken", []interface{}{arg1, arg2, arg3})
 	fake.wrapTokenMutex.Unlock()
 	if fake.WrapTokenStub != nil {
-		return fake.WrapTokenStub(arg1)
+		return fake.WrapTokenStub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1
@@ -47,17 +51,17 @@ func (fake *TokenWrapper) WrapTokenCallCount() int {
 	return len(fake.wrapTokenArgsForCall)
 }
 
-func (fake *TokenWrapper) WrapTokenCalls(stub func(string) string) {
+func (fake *TokenWrapper) WrapTokenCalls(stub func(string, string, string) string) {
 	fake.wrapTokenMutex.Lock()
 	defer fake.wrapTokenMutex.Unlock()
 	fake.WrapTokenStub = stub
 }
 
-func (fake *TokenWrapper) WrapTokenArgsForCall(i int) string {
+func (fake *TokenWrapper) WrapTokenArgsForCall(i int) (string, string, string) {
 	fake.wrapTokenMutex.RLock()
 	defer fake.wrapTokenMutex.RUnlock()
 	argsForCall := fake.wrapTokenArgsForCall[i]
-	return argsForCall.arg1
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *TokenWrapper) WrapTokenReturns(result1 string) {

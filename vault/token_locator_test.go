@@ -8,7 +8,7 @@ import (
 	"github.com/dhoelle/cryptr/vault"
 )
 
-func Test_LookupTokenRE(t *testing.T) {
+func Test_EncodedRE(t *testing.T) {
 	type args struct {
 		s string
 	}
@@ -59,7 +59,7 @@ func Test_LookupTokenRE(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var envelopes []string
 			var payloads []string
-			matches := vault.LookupTokenRE.FindAllStringSubmatch(tt.args.s, -1)
+			matches := vault.EncodedRE.FindAllStringSubmatch(tt.args.s, -1)
 			fmt.Printf("DEBUG: matches: %#v\n", matches)
 			for _, m := range matches {
 				if len(m) > 0 {

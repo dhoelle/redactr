@@ -70,6 +70,7 @@ func (e *TokenEncoder) EncodeTokens(s string) (string, error) {
 	for i := len(locations) - 1; i >= 0; i-- {
 		location := locations[i]
 		payload := s[location.PayloadStart:location.PayloadEnd]
+		envelope := s[location.EnvelopeStart:location.EnvelopeEnd]
 
 		encoded, err := e.Encoder.Encode(payload)
 		if err != nil {
@@ -78,7 +79,8 @@ func (e *TokenEncoder) EncodeTokens(s string) (string, error) {
 
 		// Cut the placeholder out of the original plaintext,
 		// and replace it with the new ciphertext
-		s = s[:location.EnvelopeStart] + e.Wrapper.WrapToken(encoded) + s[location.EnvelopeEnd:]
+		wrappedToken := e.Wrapper.WrapToken(encoded, payload, envelope)
+		s = s[:location.EnvelopeStart] + wrappedToken + s[location.EnvelopeEnd:]
 	}
 
 	return s, nil
@@ -102,6 +104,7 @@ func (d *TokenDecoder) DecodeTokens(s string, opts ...DecodeTokensOption) (strin
 	for i := len(locations) - 1; i >= 0; i-- {
 		location := locations[i]
 		payload := s[location.PayloadStart:location.PayloadEnd]
+		envelope := s[location.EnvelopeStart:location.EnvelopeEnd]
 
 		encoded, err := d.Decoder.Decode(payload)
 		if err != nil {
@@ -110,7 +113,7 @@ func (d *TokenDecoder) DecodeTokens(s string, opts ...DecodeTokensOption) (strin
 
 		ins := encoded
 		if conf.wrapTokens && d.Wrapper != nil {
-			ins = d.Wrapper.WrapToken(encoded)
+			ins = d.Wrapper.WrapToken(encoded, payload, envelope)
 		}
 
 		// Cut the placeholder out of the original plaintext,

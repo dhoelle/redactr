@@ -40,7 +40,7 @@ func TestTokenEncoder_EncodeTokens(t *testing.T) {
 		}, nil)
 		fakeEncoder.EncodeReturnsOnCall(0, "aaa", nil)
 		fakeEncoder.EncodeReturnsOnCall(1, "bbb", nil)
-		fakeTokenWrapper.WrapTokenStub = func(s string) string {
+		fakeTokenWrapper.WrapTokenStub = func(s, p, e string) string {
 			return "secret-encoded:" + s + ":secret-encoded"
 		}
 		want := "foo secret-encoded:bbb:secret-encoded secret-encoded:aaa:secret-encoded baz"
@@ -109,7 +109,7 @@ func TestTokenDecoder_DecodeTokens(t *testing.T) {
 		}, nil)
 		fakeDecoder.DecodeReturnsOnCall(0, "swordfish", nil)
 		fakeDecoder.DecodeReturnsOnCall(1, "hunter2", nil)
-		fakeTokenWrapper.WrapTokenStub = func(s string) string {
+		fakeTokenWrapper.WrapTokenStub = func(s, p, e string) string {
 			return "secret:" + s + ":secret"
 		}
 

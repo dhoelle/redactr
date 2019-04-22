@@ -4,7 +4,7 @@ package cryptr
 
 // A TokenWrapper wraps tokens
 type TokenWrapper interface {
-	WrapToken(string) string
+	WrapToken(token, originalPayload, originalEnvelope string) string
 }
 
 // StringWrapper wraps tokens by putting
@@ -14,6 +14,6 @@ type StringWrapper struct {
 }
 
 // WrapToken wraps the string with Before and After
-func (w *StringWrapper) WrapToken(s string) string {
-	return w.Before + s + w.After
+func (w *StringWrapper) WrapToken(token, originalPayload, originalEnvelope string) string {
+	return w.Before + token + w.After
 }

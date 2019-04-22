@@ -18,6 +18,7 @@ type Tool struct {
 	VaultDecoder  *TokenDecoder
 
 	SecretEncoder *TokenEncoder
+	VaultEncoder  *TokenEncoder
 }
 
 // New creates a new Tool
@@ -41,11 +42,11 @@ func New(opts ...NewToolOption) (*Tool, error) {
 		t.SecretEncoder = &TokenEncoder{
 			Locator: &RegexTokenLocator{RE: regexp.MustCompile(`(?U)secret:(.+):secret`)},
 			Encoder: &aes.Encoding{Key: key},
-			Wrapper: &StringWrapper{Before: "secret-encrypted:", After: ":secret-encrypted"},
+			Wrapper: &StringWrapper{Before: "secret-aes-256-gcm:", After: ":secret-aes-256-gcm"},
 		}
 
 		t.SecretDecoder = &TokenDecoder{
-			Locator: &RegexTokenLocator{RE: regexp.MustCompile(`(?U)secret-encrypted:(.+):secret-encrypted`)},
+			Locator: &RegexTokenLocator{RE: regexp.MustCompile(`(?U)secret-aes-256-gcm:(.+):secret-aes-256-gcm`)},
 			Decoder: &aes.Encoding{Key: key},
 			Wrapper: &StringWrapper{Before: "secret:", After: ":secret"},
 		}
@@ -61,8 +62,14 @@ func New(opts ...NewToolOption) (*Tool, error) {
 	vaultWrapper := &vault.StandardClientWrapper{Client: vaultClient}
 	vaultEncoding := vault.NewEncoding(vaultWrapper)
 	t.VaultDecoder = &TokenDecoder{
-		Locator: &RegexTokenLocator{RE: vault.LookupTokenRE},
+		Locator: &RegexTokenLocator{RE: vault.EncodedRE},
 		Decoder: vaultEncoding,
+		Wrapper: &vault.TokenWrapper{Before: "vault-secret:"},
+	}
+	t.VaultEncoder = &TokenEncoder{
+		Locator: &RegexTokenLocator{RE: vault.UnencodedRE},
+		Encoder: vaultEncoding,
+		Wrapper: &StringWrapper{Before: "vault:"},
 	}
 
 	return t, nil
@@ -91,6 +98,13 @@ func (a *Tool) EncodeTokens(s string) (string, error) {
 		s, err = a.SecretEncoder.EncodeTokens(s)
 		if err != nil {
 			return "", fmt.Errorf("secret encoder failed: %v", err)
+		}
+	}
+
+	if a.VaultEncoder != nil {
+		s, err = a.VaultEncoder.EncodeTokens(s)
+		if err != nil {
+			return "", fmt.Errorf("vault encoder failed: %v", err)
 		}
 	}
 

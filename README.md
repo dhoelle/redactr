@@ -1,37 +1,89 @@
 # cryptr
 
-Keep obscured secrets alongside plaintext.
+`cryptr` enables you to keep obscured secrets alongside plaintext.
 
-`cryptr` searches for secret declarations inside
-text, and replaces them with secrets.
+`cryptr encode` finds tokens with encodable secrets, and encodes them.
+
+`cryptr decode` finds tokens with decodable secrets, and decodes them.
+
+## Install
+
+```sh
+go get github.com/dhoelle/cryptr/cmd/cryptr
+```
 
 ## Example (CLI)
 
+Set some environment variables:
+```
+export AES_KEY="xuY6/V0ZE29RtPD3TNWga/EkdU3XYsPtBIk8U4nzZyc="
+export VAULT_ADDR=http://localhost:8200
+export VAULT_TOKEN=my_token
+```
+
+Encode some secrets:
+
 ```sh
-AES_KEY="xuY6/V0ZE29RtPD3TNWga/EkdU3XYsPtBIk8U4nzZyc=" \
-VAULT_ADDR=http://localhost:7777 \
-VAULT_TOKEN=secret_root_token \
-cryptr decode <<EOF
+cryptr encode <<EOF
 {
-    "secret_1": "secret-encrypted:DYeT3hCH1unjeWl9whMhjn/ILcM3r24XaX7xgWO8sOJkvCs=:secret-encrypted",
-    "secret_2": "secret-encrypted:AHgF0qDSX/TmRxxlftMvdnY2LMXRgA4DpFB9jy0/uh8kMXQqyQ==:secret-encrypted",
-    "vault_secret_1": "vault:path/to/kv/secret#my_key:vault",
-    "some_plaintext": "hello world",
+    "aes_secret": "secret:hunter2:secret",
+    "not_a_secret": 42,
+    "vault_secret_1": "vault-secret:path/to/kv/secret#my_key#swordfish"
 }
 EOF
 ```
 Output:
-```sh
+```json
 {
-    "secret_1": "hunter2",
-    "secret_2": "swordfish",
-    "vault_secret_1": "bond007",
-    "some_plaintext": "hello world",
+    "aes_secret": "secret-aes-256-gcm:DYeT3hCH1unjeWl9whMhjn/ILcM3r24XaX7xgWO8sOJkvCs=:secret-aes-256-gcm",
+    "not_a_secret": 42,
+    "vault_secret_1": "vault:path/to/kv/secret#my_key"
 }
 ```
 
-Note: this example is formatted in JSON, but `cryptr`
-is agnostic to the content surrounding secrets.
+Decode those secrets:
+```sh
+cryptr decode <<EOF
+{
+    "aes_secret": "secret-aes-256-gcm:DYeT3hCH1unjeWl9whMhjn/ILcM3r24XaX7xgWO8sOJkvCs=:secret-aes-256-gcm",
+    "not_a_secret": 42,
+    "vault_secret_1": "vault:path/to/kv/secret#my_key"
+}
+EOF
+```
+Output:
+```json
+{
+    "aes_secret": "hunter2",
+    "not_a_secret": 42,
+    "vault_secret_1": "swordfish"
+}
+```
+
+By default secrets are decoded without the original secret wrapping,
+but you can add it back with the `-w` flag:
+```
+Decode those secrets:
+```sh
+cryptr decode -w <<EOF
+{
+    "aes_secret": "secret-aes-256-gcm:DYeT3hCH1unjeWl9whMhjn/ILcM3r24XaX7xgWO8sOJkvCs=:secret-aes-256-gcm",
+    "not_a_secret": 42,
+    "vault_secret_1": "vault:path/to/kv/secret#my_key"
+}
+EOF
+```
+Output:
+```json
+{
+    "aes_secret": "secret:hunter2:secret",
+    "not_a_secret": 42,
+    "vault_secret_1": "vault-secret:path/to/kv/secret#my_key#swordfish"
+}
+```
+
+_Note: these examples use JSON content, but `cryptr`
+is agnostic to the content surrounding secrets_
 
 ## Example (Go Library)
 
@@ -47,7 +99,6 @@ import (
 
 func main() {
 	c, _ := cryptr.New(
-        // cryptr.FromEnv,
 		cryptr.AESKey("xuY6/V0ZE29RtPD3TNWga/EkdU3XYsPtBIk8U4nzZyc="),
 	)
 
@@ -63,84 +114,52 @@ func main() {
 }
 ```
 
-## Install
+## Supported Secret types
 
-go get github.com/dhoelle/cryptr/cmd/cryptr
+| type            	| unencoded form                        	| encoded form                            	|
+|-----------------	|---------------------------------------	|-----------------------------------------	|
+| local secret    	| secret:*:secret                       	| secret-aes-256-gcm:*:secret-aes-256-gcm 	|
+| vault KV secret 	| vault-secret:path/to/secret#key#value 	| vault:path/to/secret#key                	|
 
-## Usage
+### Inline encrypted secrets (AES-256-GCM)
 
-### Keys
+Inline secrets are encrypted with 256-bit AES-GCM.
 
-`cryptr` encrypts secrets with 256-bit AES-GCM. It requires a 32-byte key, base64 encoded.
-
-You can generate a key with `cryptr key`:
+You must supply a 32-byte key, base64 encoded. You can generate a key with `cryptr key`:
 
 ```sh
 $ cryptr key
 xuY6/V0ZE29RtPD3TNWga/EkdU3XYsPtBIk8U4nzZyc=
+
+$ export AES_KEY="xuY6/V0ZE29RtPD3TNWga/EkdU3XYsPtBIk8U4nzZyc="
+
+$ cryptr encode "secret:hunter2:secret"
+secret-aes-256-gcm:JOf+CmAfgyCSbesz6zstfUx7gHIuJ/JMeyyf8UqCGvkxjkc=:secret-aes-256-gcm
+
+$ cryptr decode "secret-aes-256-gcm:JOf+CmAfgyCSbesz6zstfUx7gHIuJ/JMeyyf8UqCGvkxjkc=:secret-aes-256-gcm"
+hunter2
+
+# Use the -w (--wrap) flag for reversible wrapped input
+$ cryptr decode -w "secret-aes-256-gcm:JOf+CmAfgyCSbesz6zstfUx7gHIuJ/JMeyyf8UqCGvkxjkc=:secret-aes-256-gcm"
+secret:hunter2:secret
 ```
 
-### Encrypting
+### Hashicorp Vault
 
-Use `cryptr encrypt` to encrypt secrets.
+Secrets may be stored in a Hashicorp Vault instance.
 
-`cryptr encrypt` encrypts anything between matching `secret:` and `:secret` tags.
+The vault adapter uses the vault CLI's standard environment variables (see: https://www.vaultproject.io/docs/commands/#environment-variables)
+
+Assuming vault has been appropriately configured, it can be used like:
 
 ```sh
-$ KEY="xuY6/V0ZE29RtPD3TNWga/EkdU3XYsPtBIk8U4nzZyc=" ./cryptr encrypt <<EOF
-{
-    "secret_1": "secret:hunter2:secret",
-    "secret_2": "secret:swordfish:secret",
-    "a_plaintext_key": "hello world",
-}
-EOF
+$ cryptr encode "vault-secret:secret/dev#my_password#hunter2"
+vault:secret/dev#my_password
+
+$ cryptr decode "vault:secret/dev#my_password"
+hunter2
+
+# Use the -w (--wrap) flag for reversible wrapped input
+$ cryptr decode -w "vault:secret/dev#my_password"
+vault-secret:secret/dev#my_password#hunter2
 ```
-Outputs:
-```sh
-{
-    "secret_1": "secret-encrypted:DYeT3hCH1unjeWl9whMhjn/ILcM3r24XaX7xgWO8sOJkvCs=:secret-encrypted",
-    "secret_2": "secret-encrypted:AHgF0qDSX/TmRxxlftMvdnY2LMXRgA4DpFB9jy0/uh8kMXQqyQ==:secret-encrypted",
-    "a_plaintext_key": "hello world",
-}
-```
-
-With the `--all`/`-a` option, the entire input is treated as a secret.
-This is useful for encrypting individual secrets.
-
-```sh
-KEY="xuY6/V0ZE29RtPD3TNWga/EkdU3XYsPtBIk8U4nzZyc=" ./cryptr encrypt -a hunter2
-```
-Outputs:
-```sh
-secret-encrypted:wjILSknIupncnCteD6599ts4BBcrPYikM28moYiWM/kXbs0=:secret-encrypted
-```
-
-### Decrypting
-
-Use `cryptr decrypt` to decrypt secrets
-
-`cryptr decrypt` decrypts anything between matching `secret-encrypted:` and `:secret-encrypted` tags.
-
-```sh
-$ KEY="xuY6/V0ZE29RtPD3TNWga/EkdU3XYsPtBIk8U4nzZyc=" ./cryptr decrypt <<EOF
-{
-    "secret_1": "secret-encrypted-aes256:DYeT3hCH1unjeWl9whMhjn/ILcM3r24XaX7xgWO8sOJkvCs=:secret-encrypted",
-    "secret_2": "secret-encrypted:AHgF0qDSX/TmRxxlftMvdnY2LMXRgA4DpFB9jy0/uh8kMXQqyQ==:secret-encrypted",
-    "vault_secret_1": "vault:path/to/kv/secret#my_key:vault",
-    "aws_secret_1": "aws-secret:path/to/secret#my_key:aws-secret",
-    "a_plaintext_key": "hello world",
-}
-EOF
-```
-Outputs:
-```sh
-{
-    "secret_1": "hunter2",
-    "secret_2": "swordfish",
-    "a_plaintext_key": "hello world",
-}
-```
-
-
-# Development
-
