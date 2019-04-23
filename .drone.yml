@@ -12,26 +12,12 @@ steps:
   commands:
   - go test -mod=vendor ./...
 
-- name: build
-  image: golang:1.12
-  commands:
-  - "(cd cmd/redactr && go build main.go)"
-  environment:
-    GOFLAGS: -mod=vendor
-  when:
-    branch:
-    - master
-    - staging
-    - release
-    event:
-    - push
-    status:
-    - success
-
 - name: release
-  image: golang:1.12
+  image: goreleaser/goreleaser
   commands:
-  - curl -sL https://git.io/goreleaser | bash
+  - /bin/goreleaser release
+  environment:
+    GITHUB_TOKEN: "${GITHUB_TOKEN}"
   when:
     event:
     - tag

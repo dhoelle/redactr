@@ -1,11 +1,8 @@
 # goreleaser configuration (http://goreleaser.com)
-before:
-  hooks:
-    - go mod download
-    - go generate ./...
 builds:
 - env:
   - CGO_ENABLED=0
+  - GOFLAGS=-mod=vendor
 archives:
 - replacements:
     darwin: Darwin
