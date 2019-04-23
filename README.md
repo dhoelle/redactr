@@ -135,6 +135,19 @@ func main() {
 }
 ```
 
+## Example (Docker)
+
+A docker image is available: https://cloud.docker.com/repository/docker/dhoelle/redactr
+
+```sh
+$ docker run \
+    -e AES_KEY="xuY6/V0ZE29RtPD3TNWga/EkdU3XYsPtBIk8U4nzZyc=" \
+    dhoelle/redactr \
+    unredact "secret-aes-256-gcm:DYeT3hCH1unjeWl9whMhjn/ILcM3r24XaX7xgWO8sOJkvCs=:secret-aes-256-gcm"
+
+hunter2
+```
+
 ## Supported Secret types
 
 | type            	| unredacted form                        	| redacted form                            	|
