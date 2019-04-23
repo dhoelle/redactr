@@ -31,6 +31,6 @@ dockers:
     image_templates:
     - "dhoelle/redactr:latest"
     - "dhoelle/redactr:{{ .Tag }}"
-    - "dhoelle/redactr:{{ .Tag }}-{{ .Env.GO_VERSION }}"
     - "dhoelle/redactr:v{{ .Major }}"
+    - "dhoelle/redactr:v{{ .Major }}{{ .Minor }}"
     dockerfile: cmd/redactr/Dockerfile
