@@ -27,6 +27,12 @@ steps:
   environment:
     GITHUB_TOKEN: 
       from_secret: GITHUB_TOKEN
+    DOCKER_USERNAME:
+      from_secret: DOCKER_USERNAME
+    DOCKER_PASSWORD:
+      from_secret: DOCKER_PASSWORD
+    DOCKER_REGISTRY:
+      from_secret: DOCKER_REGISTRY
   when:
     event:
     - tag

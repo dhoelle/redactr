@@ -22,15 +22,15 @@ changelog:
     exclude:
     - '^docs:'
     - '^test:'
-# dockers:
-#   - goos: linux
-#     goarch: amd64
-#     goarm: ''
-#     binaries:
-#     - redactr
-#     image_templates:
-#     - "dhoelle/redactr:latest"
-#     - "dhoelle/redactr:{{ .Tag }}"
-#     - "dhoelle/redactr:{{ .Tag }}-{{ .Env.GO_VERSION }}"
-#     - "dhoelle/redactr:v{{ .Major }}"
-#     dockerfile: cmd/redactr/Dockerfile
+dockers:
+  - goos: linux
+    goarch: amd64
+    goarm: ''
+    binaries:
+    - redactr
+    image_templates:
+    - "dhoelle/redactr:latest"
+    - "dhoelle/redactr:{{ .Tag }}"
+    - "dhoelle/redactr:{{ .Tag }}-{{ .Env.GO_VERSION }}"
+    - "dhoelle/redactr:v{{ .Major }}"
+    dockerfile: cmd/redactr/Dockerfile
