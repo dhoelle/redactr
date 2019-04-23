@@ -12,6 +12,14 @@ steps:
   commands:
   - go test -mod=vendor ./...
 
+- name: fetch
+  image: docker:git
+  commands:
+  - git fetch --tags
+  when:
+    event:
+    - tag
+
 - name: release
   image: goreleaser/goreleaser
   commands:
