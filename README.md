@@ -4,16 +4,13 @@
 
 Use `redactr` to obscure secrets alongside plaintext.
 
-`redactr redact` finds secrets, and replaces them with redaction tokens.
-
-`redactr unredact` finds redaction tokens, and replaces them with secrets.
-
 ## Install
 
 ### Binary
-Download binaries from the [releases page](https://github.com/dhoelle/redactr/releases)
+Download binaries are available on [the releases page](https://github.com/dhoelle/redactr/releases)
 
 ### Brew (Mac OS):
+
 ```sh
 brew tap dhoelle/tap
 brew install dhoelle/tap/redactr
@@ -21,21 +18,26 @@ brew install dhoelle/tap/redactr
 
 ### Build from source
 
-Requires Go 1.11+
+_Requires Go >1.11_
 ```sh
 go get github.com/dhoelle/redactr/cmd/redactr
 ```
 
 ## Example (CLI)
 
-Set some environment variables:
+_Note: the following examples use JSON, but `redactr` is (mostly) content agnostic_
+
+Set some environment variables, which `redactr` will use to encode and decode secrets:
+
 ```
 export AES_KEY="xuY6/V0ZE29RtPD3TNWga/EkdU3XYsPtBIk8U4nzZyc="
 export VAULT_ADDR=http://localhost:8200
 export VAULT_TOKEN=my_token
 ```
 
-Redact some secrets:
+### Redaction
+
+Redact some secrets, so you can share the payload with unprivileged parties:
 
 ```sh
 redactr redact <<EOF
@@ -46,7 +48,9 @@ redactr redact <<EOF
 }
 EOF
 ```
+
 Output:
+
 ```json
 {
     "aes_secret": "secret-aes-256-gcm:DYeT3hCH1unjeWl9whMhjn/ILcM3r24XaX7xgWO8sOJkvCs=:secret-aes-256-gcm",
@@ -55,7 +59,10 @@ Output:
 }
 ```
 
-Unredact those secrets:
+### Unredaction
+
+Unredact the secrets from above:
+
 ```sh
 redactr unredact <<EOF
 {
@@ -65,7 +72,9 @@ redactr unredact <<EOF
 }
 EOF
 ```
+
 Output:
+
 ```json
 {
     "aes_secret": "hunter2",
@@ -74,10 +83,11 @@ Output:
 }
 ```
 
-By default secrets are unredacted without the original secret wrapping.
-You can add it back with the `-w` flag:
+### Wrapping
 
-Unredact those secrets:
+By default secrets are unredacted without the original secret wrapping.
+You can add it back with the `-w`/`--wrap-tokens` flag:
+
 ```sh
 redactr unredact -w <<EOF
 {
@@ -95,8 +105,6 @@ Output:
     "vault_secret_1": "vault-secret:path/to/kv/secret#my_key#swordfish"
 }
 ```
-
-_Note: these examples use JSON, but `redactr` is content agnostic_
 
 ## Example (Go Library)
 
