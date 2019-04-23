@@ -6,6 +6,11 @@ platform:
   os: linux
   arch: amd64
 
+volumes: 
+- name: docker
+  host: 
+    path: /var/run/docker.sock 
+
 steps:
 - name: test
   image: golang:1.12
@@ -33,6 +38,10 @@ steps:
       from_secret: DOCKER_PASSWORD
     DOCKER_REGISTRY:
       from_secret: DOCKER_REGISTRY
+  volumes:
+  - name: docker
+    path: /var/run/docker.sock
+      
   when:
     event:
     - tag
