@@ -3,6 +3,9 @@ builds:
 - env:
   - CGO_ENABLED=0
   - GOFLAGS=-mod=vendor
+builds:
+- binary: redactr
+  main: ./cmd/redactr/main.go
 archives:
 - replacements:
     darwin: Darwin
