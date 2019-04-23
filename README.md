@@ -8,6 +8,18 @@ Use `redactr` to obscure secrets alongside plaintext.
 
 ## Install
 
+### Binary
+Download binaries from the [releases page](https://github.com/dhoelle/redactr/releases)
+
+### Brew (Mac OS):
+```sh
+brew tap dhoelle/tap
+brew install dhoelle/tap/redactr
+```
+
+### Build from source
+
+Requires Go 1.11+
 ```sh
 go get github.com/dhoelle/redactr/cmd/redactr
 ```
