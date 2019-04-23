@@ -1,10 +1,10 @@
 # goreleaser configuration (http://goreleaser.com)
 builds:
-- env:
-  - CGO_ENABLED=0
-  - GOFLAGS=-mod=vendor
 - binary: redactr
   main: ./cmd/redactr/main.go
+  env:
+  - CGO_ENABLED=0
+  - GOFLAGS=-mod=vendor
 archives:
 - replacements:
     darwin: Darwin
@@ -22,3 +22,15 @@ changelog:
     exclude:
     - '^docs:'
     - '^test:'
+# dockers:
+#   - goos: linux
+#     goarch: amd64
+#     goarm: ''
+#     binaries:
+#     - redactr
+#     image_templates:
+#     - "dhoelle/redactr:latest"
+#     - "dhoelle/redactr:{{ .Tag }}"
+#     - "dhoelle/redactr:{{ .Tag }}-{{ .Env.GO_VERSION }}"
+#     - "dhoelle/redactr:v{{ .Major }}"
+#     dockerfile: cmd/redactr/Dockerfile
