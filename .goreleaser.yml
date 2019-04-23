@@ -23,4 +23,8 @@ changelog:
     - '^docs:'
     - '^test:'
 brew:
-  repo: dhoelle/homebrew-formulae
+  github:
+    owner: dhoelle
+    name: homebrew-tap
+  folder: Formula
+  description: Keep obscured secrets alongside plaintext
