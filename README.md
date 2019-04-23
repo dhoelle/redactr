@@ -7,7 +7,7 @@ Use `redactr` to obscure secrets alongside plaintext.
 ## Install
 
 ### Binary
-Download binaries are available on [the releases page](https://github.com/dhoelle/redactr/releases)
+Binaries are available on [the releases page](https://github.com/dhoelle/redactr/releases)
 
 ### Brew (Mac OS):
 
