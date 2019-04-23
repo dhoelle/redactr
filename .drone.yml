@@ -23,7 +23,7 @@ steps:
 - name: release
   image: goreleaser/goreleaser:v0.106
   commands:
-  - /bin/goreleaser release
+  - /bin/goreleaser release -c .goreleaser-drone.yml
   environment:
     GITHUB_TOKEN:
       from_secret: GITHUB_TOKEN

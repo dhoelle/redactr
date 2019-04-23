@@ -1,4 +1,14 @@
 # goreleaser configuration (http://goreleaser.com)
+# 
+# Summary
+# Goreleaser's docker step must be run in a trusted
+# Docker container. Unfortunately (but reasonably),
+# Drone Cloud doesn't grant trusted access to
+# build containers.
+# 
+# This configuration is designed to work with Drone Cloud.
+# It should be identical to .goreleaser.yml, except that
+# the "dockers:" section is removed.
 builds:
 - binary: redactr
   main: ./cmd/redactr/main.go
@@ -28,11 +38,3 @@ brew:
     name: homebrew-tap
   folder: Formula
   description: Keep obscured secrets alongside plaintext
-dockers:
-  - binaries:
-    - redactr
-    image_templates:
-    - "dhoelle/redactr:{{ .Tag }}"
-    - "dhoelle/redactr:v{{ .Major }}"
-    - "dhoelle/redactr:v{{ .Major }}.{{ .Minor }}"
-    - "dhoelle/redactr:latest"
