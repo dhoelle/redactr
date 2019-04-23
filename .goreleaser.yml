@@ -22,15 +22,5 @@ changelog:
     exclude:
     - '^docs:'
     - '^test:'
-dockers:
-  - goos: linux
-    goarch: amd64
-    goarm: ''
-    binaries:
-    - redactr
-    image_templates:
-    - "dhoelle/redactr:latest"
-    - "dhoelle/redactr:{{ .Tag }}"
-    - "dhoelle/redactr:v{{ .Major }}"
-    - "dhoelle/redactr:v{{ .Major }}{{ .Minor }}"
-    dockerfile: cmd/redactr/Dockerfile
+brew:
+  repo: dhoelle/homebrew-formulae
