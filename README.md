@@ -1,5 +1,7 @@
 # redactr
 
+[![Build Status](https://cloud.drone.io/api/badges/dhoelle/redactr/status.svg)](https://cloud.drone.io/dhoelle/redactr) [![](https://godoc.org/github.com/dhoelle/redactr?status.svg)](http://godoc.org/github.com/dhoelle/redactr) [![Go Report Card](https://goreportcard.com/badge/github.com/dhoelle/redactr)](https://goreportcard.com/report/github.com/dhoelle/redactr) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 Use `redactr` to obscure secrets alongside plaintext.
 
 `redactr redact` finds secrets, and replaces them with redaction tokens.
