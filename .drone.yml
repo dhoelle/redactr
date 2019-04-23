@@ -6,11 +6,6 @@ platform:
   os: linux
   arch: amd64
 
-volumes: 
-- name: docker
-  host: 
-    path: /var/run/docker.sock 
-
 steps:
 - name: test
   image: golang:1.12
@@ -30,18 +25,8 @@ steps:
   commands:
   - /bin/goreleaser release
   environment:
-    GITHUB_TOKEN: 
+    GITHUB_TOKEN:
       from_secret: GITHUB_TOKEN
-    DOCKER_USERNAME:
-      from_secret: DOCKER_USERNAME
-    DOCKER_PASSWORD:
-      from_secret: DOCKER_PASSWORD
-    DOCKER_REGISTRY:
-      from_secret: DOCKER_REGISTRY
-  volumes:
-  - name: docker
-    path: /var/run/docker.sock
-      
   when:
     event:
     - tag
