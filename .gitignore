@@ -1,2 +1,3 @@
 cmd/redactr/redactr
 .gobincache
+dist/
