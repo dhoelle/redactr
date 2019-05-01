@@ -116,16 +116,18 @@ func (a *Tool) UnredactTokens(s string, opts ...UnredactTokensOption) (string, e
 	var err error
 
 	if a.SecretUnredacter != nil {
-		s, err = a.SecretUnredacter.UnredactTokens(s, opts...)
+		sc := s
+		s, err = a.SecretUnredacter.UnredactTokens(sc, opts...)
 		if err != nil {
-			return "", fmt.Errorf("secret unredacter failed: %v", err)
+			return "", fmt.Errorf("failed to unredact secret token %v: %v", sc, err)
 		}
 	}
 
 	if a.VaultUnredacter != nil {
-		s, err = a.VaultUnredacter.UnredactTokens(s, opts...)
+		sc := s
+		s, err = a.VaultUnredacter.UnredactTokens(sc, opts...)
 		if err != nil {
-			return "", fmt.Errorf("vault unredacter failed: %v", err)
+			return "", fmt.Errorf("failed to unredact vault token %v: %v", sc, err)
 		}
 	}
 

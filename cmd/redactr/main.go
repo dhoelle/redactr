@@ -28,7 +28,7 @@ func main() {
 		cli.Version(version),
 	)
 	must(err, "failed to create CLI")
-	must(c.Run(os.Args), "failed to run")
+	must(c.Run(os.Args), "redactr failed")
 }
 
 // must wraps a given error with a message and prints it via

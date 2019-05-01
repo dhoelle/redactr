@@ -74,7 +74,7 @@ func (e *TokenRedacter) RedactTokens(s string) (string, error) {
 
 		redacted, err := e.Redacter.Redact(payload)
 		if err != nil {
-			return "", fmt.Errorf("failed to unredact payload: %v", err)
+			return "", fmt.Errorf("failed to redact: %v", err)
 		}
 
 		// Cut the placeholder out of the original plaintext,
@@ -108,7 +108,7 @@ func (d *TokenUnredacter) UnredactTokens(s string, opts ...UnredactTokensOption)
 
 		redacted, err := d.Unredacter.Unredact(payload)
 		if err != nil {
-			return "", fmt.Errorf(`failed to unredact payload "%v": %v`, payload, err)
+			return "", err
 		}
 
 		ins := redacted

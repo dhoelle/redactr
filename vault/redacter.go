@@ -40,6 +40,9 @@ func (r *Redacter) Unredact(secretDeclaration string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to read secret: %v", err)
 	}
+	if secret == nil {
+		return "", fmt.Errorf("not found")
+	}
 
 	switch typed := secret.(type) {
 	case string:
@@ -92,6 +95,9 @@ func (w *StandardClientWrapper) ReadSecret(path, key string) (interface{}, error
 	if err != nil {
 		return nil, fmt.Errorf("failed to read secret: %v", err)
 	}
+	if secret.Data == nil {
+		return nil, nil
+	}
 
 	// Determine if this KV secret is version 1 or 2
 	//
@@ -99,10 +105,13 @@ func (w *StandardClientWrapper) ReadSecret(path, key string) (interface{}, error
 	// secret[key].
 	//
 	// In version 2, the secret is stored
-	// as secret["data"][key], and there is also a
-	// secret["metadata"] that has some information
+	// as secret["data"][key]. There are also values
+	// under secret["metadata"] that have information
 	// we can use to confirm the secret type, such as
 	// secret["metadata"]["version"]
+	//
+	// TODO(donald): Is there a better way to differentiate
+	// between v1 and v2 secrets?
 	if secret.Data["metadata"] != nil && secret.Data["data"] != nil {
 		md, mdok := secret.Data["metadata"].(map[string]interface{})
 		kv, kvok := secret.Data["data"].(map[string]interface{})
