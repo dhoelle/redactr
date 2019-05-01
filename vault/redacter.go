@@ -92,6 +92,28 @@ func (w *StandardClientWrapper) ReadSecret(path, key string) (interface{}, error
 	if err != nil {
 		return nil, fmt.Errorf("failed to read secret: %v", err)
 	}
+
+	// Determine if this KV secret is version 1 or 2
+	//
+	// In version 1, the secret is stored directly under
+	// secret[key].
+	//
+	// In version 2, the secret is stored
+	// as secret["data"][key], and there is also a
+	// secret["metadata"] that has some information
+	// we can use to confirm the secret type, such as
+	// secret["metadata"]["version"]
+	if secret.Data["metadata"] != nil && secret.Data["data"] != nil {
+		md, mdok := secret.Data["metadata"].(map[string]interface{})
+		kv, kvok := secret.Data["data"].(map[string]interface{})
+		if !mdok || !kvok || md["version"] == nil {
+			// treat this as a v1 secret
+			return secret.Data[key], nil
+		}
+		// treat this as a v2 secret
+		return kv[key], nil
+	}
+
 	return secret.Data[key], nil
 }
 
