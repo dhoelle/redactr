@@ -1,7 +1,6 @@
 package vault_test
 
 import (
-	"fmt"
 	"reflect"
 	"testing"
 
@@ -60,7 +59,6 @@ func Test_RedactedRE(t *testing.T) {
 			var envelopes []string
 			var payloads []string
 			matches := vault.RedactedRE.FindAllStringSubmatch(tt.args.s, -1)
-			fmt.Printf("DEBUG: matches: %#v\n", matches)
 			for _, m := range matches {
 				if len(m) > 0 {
 					envelopes = append(envelopes, m[0])

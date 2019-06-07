@@ -2,14 +2,34 @@
 
 [![Build Status](https://cloud.drone.io/api/badges/dhoelle/redactr/status.svg)](https://cloud.drone.io/dhoelle/redactr) [![](https://godoc.org/github.com/dhoelle/redactr?status.svg)](http://godoc.org/github.com/dhoelle/redactr) [![Go Report Card](https://goreportcard.com/badge/github.com/dhoelle/redactr)](https://goreportcard.com/report/github.com/dhoelle/redactr) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Use `redactr` to obscure secrets alongside plaintext.
+`redactr` replaces **secrets** with **Redacted Secrets**.
+
+With the right privileges, `redactr` can replace **Redacted Secrets** with **secrets**.
+
+Table of Contents
+=================
+
+   * [redactr](#redactr)
+      * [Install](#install)
+         * [Binary](#binary)
+         * [Brew (Mac OS)](#brew-mac-os)
+         * [Build from source](#build-from-source)
+      * [Example (CLI)](#example-cli)
+         * [Redact secrets](#redact-secrets)
+         * [Unredact secrets](#unredact-secrets)
+         * [Execute commands](#execute-commands)
+            * [Re-evaluating the environment](#re-evaluating-the-environment)
+      * [Example (Docker)](#example-docker)
+      * [Supported Secret types](#supported-secret-types)
+         * [Inline encrypted secrets (AES-256-GCM)](#inline-encrypted-secrets-aes-256-gcm)
+         * [Hashicorp Vault](#hashicorp-vault)
 
 ## Install
 
 ### Binary
 Binaries are available on [the releases page](https://github.com/dhoelle/redactr/releases)
 
-### Brew (Mac OS):
+### Brew (Mac OS)
 
 ```sh
 brew tap dhoelle/tap
@@ -25,9 +45,7 @@ go get github.com/dhoelle/redactr/cmd/redactr
 
 ## Example (CLI)
 
-_Note: the following examples use JSON, but `redactr` is (mostly) content agnostic_
-
-Set some environment variables, which `redactr` will use to encode and decode secrets:
+First, set some environment variables, which `redactr` will use to redact and unredact secrets:
 
 ```
 export AES_KEY="xuY6/V0ZE29RtPD3TNWga/EkdU3XYsPtBIk8U4nzZyc="
@@ -35,76 +53,98 @@ export VAULT_ADDR=http://localhost:8200
 export VAULT_TOKEN=my_token
 ```
 
-### Redaction
-
-Redact some secrets, so you can share the payload with unprivileged parties:
+### Redact secrets
 
 ```sh
 redactr redact <<EOF
-{
-    "aes_secret": "secret:hunter2:secret",
-    "not_a_secret": 42,
-    "vault_secret_1": "vault-secret:path/to/kv/secret#my_key#swordfish"
-}
+My email password is secret:hunter2:secret
+My database password is vault-secret:path/to/kv/secret#my_key#swordfish
 EOF
+# output:
+# My email password is secret-aes-256-gcm:DYeT3hCH1unjeWl9whMhjn/ILcM3r24XaX7xgWO8sOJkvCs=:secret-aes-256-gcm
+# My database password is vault:path/to/kv/secret#my_key
 ```
 
-Output:
-
-```json
-{
-    "aes_secret": "secret-aes-256-gcm:DYeT3hCH1unjeWl9whMhjn/ILcM3r24XaX7xgWO8sOJkvCs=:secret-aes-256-gcm",
-    "not_a_secret": 42,
-    "vault_secret_1": "vault:path/to/kv/secret#my_key"
-}
-```
-
-### Unredaction
-
-Unredact the secrets from above:
+### Unredact secrets
 
 ```sh
 redactr unredact <<EOF
-{
-    "aes_secret": "secret-aes-256-gcm:DYeT3hCH1unjeWl9whMhjn/ILcM3r24XaX7xgWO8sOJkvCs=:secret-aes-256-gcm",
-    "not_a_secret": 42,
-    "vault_secret_1": "vault:path/to/kv/secret#my_key"
-}
+My email password is secret-aes-256-gcm:DYeT3hCH1unjeWl9whMhjn/ILcM3r24XaX7xgWO8sOJkvCs=:secret-aes-256-gcm
+My database password is vault:path/to/kv/secret#my_key
 EOF
+# output:
+# My email password is hunter2
+# My database password is swordfish
 ```
-
-Output:
-
-```json
-{
-    "aes_secret": "hunter2",
-    "not_a_secret": 42,
-    "vault_secret_1": "swordfish"
-}
-```
-
-### Wrapping
 
 By default secrets are unredacted without the original secret wrapping.
 You can add it back with the `-w`/`--wrap-tokens` flag:
 
 ```sh
 redactr unredact -w <<EOF
-{
-    "aes_secret": "secret-aes-256-gcm:DYeT3hCH1unjeWl9whMhjn/ILcM3r24XaX7xgWO8sOJkvCs=:secret-aes-256-gcm",
-    "not_a_secret": 42,
-    "vault_secret_1": "vault:path/to/kv/secret#my_key"
-}
+My email password is secret-aes-256-gcm:DYeT3hCH1unjeWl9whMhjn/ILcM3r24XaX7xgWO8sOJkvCs=:secret-aes-256-gcm
+My database password is vault:path/to/kv/secret#my_key
 EOF
+# output:
+# My email password is secret:hunter2:secret
+# My database password is vault-secret:path/to/kv/secret#my_key#swordfish
 ```
-Output:
-```json
-{
-    "aes_secret": "secret:hunter2:secret",
-    "not_a_secret": 42,
-    "vault_secret_1": "vault-secret:path/to/kv/secret#my_key#swordfish"
+
+### Execute commands
+
+`redactr exec` executes commands with redacted secrets in its environment
+
+```sh
+PASSWORD="secret-aes-256-gcm:DYeT3hCH1unjeWl9whMhjn/ILcM3r24XaX7xgWO8sOJkvCs=:secret-aes-256-gcm" \
+redactr exec echo 'my password is $PASSWORD'
+# output: my password is hunter2
+```
+
+#### Re-evaluating the environment
+
+Some `redactr` secrets are dynamic. For example, passwords in a `vault` instance can change over time.
+
+`redactr exec` can be configured to periodically unredact the 
+secrets that a command uses and, if they have changed,
+either stop or restart the command.
+
+The following example creates a local vault instance and
+changes a password every second, then runs a command with
+`redactr exec` which re-runs on each change:
+
+```
+# Start a local vault instance
+docker run -d --cap-add=IPC_LOCK -e 'VAULT_DEV_ROOT_TOKEN_ID=myroot' -p 8222:8200 vault
+sleep 1
+
+# Start a background job which changes a secret every second for 20 seconds
+func changesecrets() {
+    for i in {1..10}
+    do
+        VAULT_ADDR=http://0.0.0.0:8222 VAULT_TOKEN=myroot vault kv put secret/db_password value=hunter2
+        sleep 1
+        VAULT_ADDR=http://0.0.0.0:8222 VAULT_TOKEN=myroot vault kv put secret/db_password value=swordfish
+        sleep 1
+    done
 }
-```
+changesecrets &>/dev/null &
+sleep 1
+
+# use `redactr exec` to print the secret and block.
+# Each time the secret changes, the command will
+# restart and the new secret will be printed.
+VAULT_ADDR=http://localhost:8222 \
+VAULT_TOKEN=myroot \
+SECRET_KEY=vault:secret/data/db_password#value \
+redactr exec \
+    -r 1000ms 
+    /bin/bash -c 'echo "$(date): secret key: $SECRET_KEY"; sleep 3'
+
+# example output:
+# Tue Apr 30 18:42:24 PDT 2019: secret key: swordfish
+# Tue Apr 30 18:42:25 PDT 2019: secret key: hunter2
+# Tue Apr 30 18:42:26 PDT 2019: secret key: swordfish
+# ...
 
 ## Example (Go Library)
 
@@ -145,21 +185,20 @@ $ docker run \
     dhoelle/redactr \
     unredact "secret-aes-256-gcm:DYeT3hCH1unjeWl9whMhjn/ILcM3r24XaX7xgWO8sOJkvCs=:secret-aes-256-gcm"
 
-hunter2
+# output:
+# hunter2
 ```
 
-## Supported Secret types
+## Secret types
 
 | type            	| unredacted form                        	| redacted form                            	|
 |-----------------	|---------------------------------------	|-----------------------------------------	|
 | local secret    	| secret:*:secret                       	| secret-aes-256-gcm:*:secret-aes-256-gcm 	|
 | vault KV secret 	| vault-secret:path/to/secret#key#value 	| vault:path/to/secret#key                	|
 
-### Inline encrypted secrets (AES-256-GCM)
+### Encrypted secrets (AES-256-GCM)
 
-Inline secrets are encrypted with 256-bit AES-GCM.
-
-You must supply a 32-byte key, base64 redacted. You can generate a key with `redactr key`:
+Secrets can be redacted via 256-bit AES-GCM encryption. 
 
 ```sh
 $ redactr key
@@ -173,7 +212,7 @@ secret-aes-256-gcm:JOf+CmAfgyCSbesz6zstfUx7gHIuJ/JMeyyf8UqCGvkxjkc=:secret-aes-2
 $ redactr unredact "secret-aes-256-gcm:JOf+CmAfgyCSbesz6zstfUx7gHIuJ/JMeyyf8UqCGvkxjkc=:secret-aes-256-gcm"
 hunter2
 
-# Use the -w (--wrap) flag for reversible wrapped input
+# Use the -w (--wrap) flag to return a reversible wrapped secret
 $ redactr unredact -w "secret-aes-256-gcm:JOf+CmAfgyCSbesz6zstfUx7gHIuJ/JMeyyf8UqCGvkxjkc=:secret-aes-256-gcm"
 secret:hunter2:secret
 ```
@@ -193,7 +232,7 @@ vault:secret/dev#my_password
 $ redactr unredact "vault:secret/dev#my_password"
 hunter2
 
-# Use the -w (--wrap) flag for reversible wrapped input
+# Use the -w (--wrap) flag to return a reversible wrapped secret
 $ redactr unredact -w "vault:secret/dev#my_password"
 vault-secret:secret/dev#my_password#hunter2
 ```

@@ -2,12 +2,24 @@ package redactr
 
 import "fmt"
 
+//go:generate gobin -m -run github.com/maxbrunsfeld/counterfeiter/v6 -o ./fakes/token_redacter.go --fake-name TokenRedacter . TokenRedacter
+
+type TokenRedacter interface {
+	RedactTokens(string) (string, error)
+}
+
+//go:generate gobin -m -run github.com/maxbrunsfeld/counterfeiter/v6 -o ./fakes/token_unredacter.go --fake-name TokenUnredacter . TokenUnredacter
+
+type TokenUnredacter interface {
+	UnredactTokens(string, ...UnredactTokensOption) (string, error)
+}
+
 //go:generate gobin -m -run github.com/maxbrunsfeld/counterfeiter/v6 -o ./fakes/token_redacter_unredacter.go --fake-name TokenRedacterUnredacter . TokenRedacterUnredacter
 
 // A TokenRedacterUnredacter can redact and unredact tokens
 type TokenRedacterUnredacter interface {
-	RedactTokens(string) (string, error)
-	UnredactTokens(string, ...UnredactTokensOption) (string, error)
+	TokenRedacter
+	TokenUnredacter
 }
 
 // A UnredactTokensConfig configures a request to unredact tokens.
@@ -41,24 +53,24 @@ func WrapTokens(c *UnredactTokensConfig) {
 	c.wrapTokens = true
 }
 
-// A TokenRedacter looks for secret tokens
+// A CompositeTokenRedacter looks for secret tokens
 // within text, and redacts them
-type TokenRedacter struct {
+type CompositeTokenRedacter struct {
 	Redacter Redacter
 	Locator  TokenLocator
 	Wrapper  TokenWrapper
 }
 
-// A TokenUnredacter looks for redacted secret tokens
+// A CompositeTokenUnredacter looks for redacted secret tokens
 // within text, and unredacts them
-type TokenUnredacter struct {
+type CompositeTokenUnredacter struct {
 	Unredacter Unredacter
 	Locator    TokenLocator
 	Wrapper    TokenWrapper
 }
 
 // RedactTokens looks for secret tokens within text, and redacts them
-func (e *TokenRedacter) RedactTokens(s string) (string, error) {
+func (e *CompositeTokenRedacter) RedactTokens(s string) (string, error) {
 	locations, err := e.Locator.LocateTokens(s)
 	if err != nil {
 		return "", fmt.Errorf("failed to locate tokens: %v", err)
@@ -87,7 +99,7 @@ func (e *TokenRedacter) RedactTokens(s string) (string, error) {
 }
 
 // UnredactTokens looks for redacted secret tokens within text, and unredacts them
-func (d *TokenUnredacter) UnredactTokens(s string, opts ...UnredactTokensOption) (string, error) {
+func (d *CompositeTokenUnredacter) UnredactTokens(s string, opts ...UnredactTokensOption) (string, error) {
 	conf := &UnredactTokensConfig{}
 	for _, o := range opts {
 		o(conf)

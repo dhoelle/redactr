@@ -13,6 +13,21 @@ import (
 	"github.com/urfave/cli"
 )
 
+//go:generate gobin -m -run github.com/maxbrunsfeld/counterfeiter/v6 -o ./fakes/token_redacter_unredacter.go --fake-name TokenRedacterUnredacter . TokenRedacterUnredacter
+
+// A TokenRedacterUnredacter can redact and unredact tokens
+type TokenRedacterUnredacter interface {
+	RedactTokens(string) (string, error)
+	UnredactTokens(string, ...redactr.UnredactTokensOption) (string, error)
+}
+
+//go:generate gobin -m -run github.com/maxbrunsfeld/counterfeiter/v6 -o ./fakes/execer.go --fake-name Execer . Execer
+
+// An Execer can exec a shell command
+type Execer interface {
+	Exec(name string, args []string, opts ...redactr.ExecOption) error
+}
+
 // CLI provides a command-line interface for redactr
 type CLI struct {
 	cliApp *cli.App
@@ -55,14 +70,14 @@ func Date(v string) NewOption {
 }
 
 // New creates a new CLI
-func New(ted redactr.TokenRedacterUnredacter, opts ...NewOption) (*CLI, error) {
+func New(ted TokenRedacterUnredacter, execer Execer, opts ...NewOption) (*CLI, error) {
 	conf := &Config{}
 	for _, o := range opts {
 		o(conf)
 	}
 
 	app := cli.NewApp()
-	app.Usage = "keep redacted secrets alongside your plaintext"
+	app.Usage = "redact and unredact secrets"
 	app.Version = versionString(conf.version, conf.commit, conf.date)
 	app.Commands = []cli.Command{
 		{
@@ -94,6 +109,54 @@ func New(ted redactr.TokenRedacterUnredacter, opts ...NewOption) (*CLI, error) {
 				},
 			},
 			Action: unredact(ted, os.Stdin, os.Stdout),
+		},
+		{
+			Name:  "exec",
+			Usage: "execute a command (run `exec --help` for details)",
+			UsageText: `Execute a command, with bonus features to make it easier to work with redacted environments:
+
+		1. Redacted secrets in the environment will be unredacted.
+
+		   For example:
+
+				$ AES_KEY="xuY6/V0ZE29RtPD3TNWga/EkdU3XYsPtBIk8U4nzZyc=" \
+				MY_PASSWORD="secret-aes-256-gcm:DYeT3hCH1unjeWl9whMhjn/ILcM3r24XaX7xgWO8sOJkvCs=:secret-aes-256-gcm" \
+				redactr exec echo 'my password is $MY_PASSWORD'
+
+				# example output:
+				# my password is hunter2
+
+		2. If you set the --restart-if-env-changes or --stop-if-env-changes options, 
+		   it will periodically re-check the environment. If the environment changes 
+		   (e.g. a secret is updated in Vault), the command will be restarted or stopped.
+
+		   For example:
+		   
+				$ VAULT_ADDR=http://localhost:8222 \
+					VAULT_TOKEN=myroot \
+					SECRET_KEY=vault:secret/data/db_password#value \
+					redactr exec \
+						--restart-if-env-changes 1000ms \
+						/bin/bash -c 'echo "$(date): secret key: $SECRET_KEY"; sleep 2073600'
+			
+				# example output:
+				# Tue Apr 30 18:42:24 PDT 2019: secret key: swordfish
+				# Tue Apr 30 18:42:25 PDT 2019: secret key: hunter2
+				# Tue Apr 30 18:42:26 PDT 2019: secret key: swordfish
+				# ...
+				
+			(See https://github.com/dhoelle/redactr for complete examples)`,
+			Flags: []cli.Flag{
+				cli.DurationFlag{
+					Name:  "restart-if-env-changes, r",
+					Usage: "periodically re-evaluate the environment. If it changes, restart the command",
+				},
+				cli.DurationFlag{
+					Name:  "stop-if-env-changes, s",
+					Usage: "periodically re-evaluate the environment. If it changes, stop the command",
+				},
+			},
+			Action: exec(execer),
 		},
 	}
 
@@ -169,6 +232,30 @@ func unredact(ted redactr.TokenRedacterUnredacter, in io.Reader, out io.Writer) 
 
 		fmt.Fprintln(out, unredacted)
 		return nil
+	}
+}
+
+func exec(execer Execer) func(*cli.Context) error {
+	return func(c *cli.Context) error {
+		var args []string
+		if c.Args().Present() {
+			args = c.Args()
+		} else {
+			b, err := ioutil.ReadAll(os.Stdin)
+			if err != nil {
+				return fmt.Errorf("failed to read input: %v", err)
+			}
+			args = strings.Fields(string(b))
+		}
+
+		switch {
+		case c.Duration("stop-if-env-changes") > 0:
+			return execer.Exec(args[0], args[1:], redactr.StopIfEnvChanges(c.Duration("stop-if-env-changes")))
+		case c.Duration("restart-if-env-changes") > 0:
+			return execer.Exec(args[0], args[1:], redactr.RestartIfEnvChanges(c.Duration("restart-if-env-changes")))
+		default:
+			return execer.Exec(args[0], args[1:])
+		}
 	}
 }
 

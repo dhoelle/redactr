@@ -23,6 +23,7 @@ func main() {
 
 	c, err := cli.New(
 		tool,
+		tool,
 		cli.Commit(commit),
 		cli.Date(date),
 		cli.Version(version),

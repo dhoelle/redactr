@@ -3,22 +3,24 @@ package redactr
 import (
 	"encoding/base64"
 	"fmt"
+	"os"
 	"regexp"
 
 	"github.com/dhoelle/redactr/aes"
+	"github.com/dhoelle/redactr/exec"
 	"github.com/dhoelle/redactr/vault"
 	"github.com/hashicorp/vault/api"
 )
 
-// Tool is a "master redacter/unredacter". It wraps
-// the combined functionality of redactr into a
-// simpler interface.
+// A Tool can be used to redact and unredact secrets.
+// If you want to use redactr as a library, you probably
+// want to create and use a Tool.
 type Tool struct {
-	SecretUnredacter *TokenUnredacter
-	VaultUnredacter  *TokenUnredacter
+	SecretUnredacter TokenUnredacter
+	VaultUnredacter  TokenUnredacter
 
-	SecretRedacter *TokenRedacter
-	VaultRedacter  *TokenRedacter
+	SecretRedacter TokenRedacter
+	VaultRedacter  TokenRedacter
 }
 
 // New creates a new Tool
@@ -39,13 +41,13 @@ func New(opts ...NewToolOption) (*Tool, error) {
 			return nil, fmt.Errorf("failed to parse AES key: %v", err)
 		}
 
-		t.SecretRedacter = &TokenRedacter{
+		t.SecretRedacter = &CompositeTokenRedacter{
 			Locator:  &RegexTokenLocator{RE: regexp.MustCompile(`(?U)secret:(.+):secret`)},
 			Redacter: &aes.Redacter{Key: key},
 			Wrapper:  &StringWrapper{Before: "secret-aes-256-gcm:", After: ":secret-aes-256-gcm"},
 		}
 
-		t.SecretUnredacter = &TokenUnredacter{
+		t.SecretUnredacter = &CompositeTokenUnredacter{
 			Locator:    &RegexTokenLocator{RE: regexp.MustCompile(`(?U)secret-aes-256-gcm:(.+):secret-aes-256-gcm`)},
 			Unredacter: &aes.Redacter{Key: key},
 			Wrapper:    &StringWrapper{Before: "secret:", After: ":secret"},
@@ -61,12 +63,12 @@ func New(opts ...NewToolOption) (*Tool, error) {
 	}
 	vaultWrapper := &vault.StandardClientWrapper{Client: vaultClient}
 	vaultRedacter := vault.NewRedacter(vaultWrapper)
-	t.VaultUnredacter = &TokenUnredacter{
+	t.VaultUnredacter = &CompositeTokenUnredacter{
 		Locator:    &RegexTokenLocator{RE: vault.RedactedRE},
 		Unredacter: vaultRedacter,
 		Wrapper:    &vault.TokenWrapper{Before: "vault-secret:"},
 	}
-	t.VaultRedacter = &TokenRedacter{
+	t.VaultRedacter = &CompositeTokenRedacter{
 		Locator:  &RegexTokenLocator{RE: vault.UnredactedRE},
 		Redacter: vaultRedacter,
 		Wrapper:  &StringWrapper{Before: "vault:"},
@@ -90,19 +92,19 @@ func AESKey(key string) NewToolOption {
 	}
 }
 
-// RedactTokens redacts all tokens in the string
-func (a *Tool) RedactTokens(s string) (string, error) {
+// RedactTokens redacts all tokens in a string
+func (t *Tool) RedactTokens(s string) (string, error) {
 	var err error
 
-	if a.SecretRedacter != nil {
-		s, err = a.SecretRedacter.RedactTokens(s)
+	if t.SecretRedacter != nil {
+		s, err = t.SecretRedacter.RedactTokens(s)
 		if err != nil {
 			return "", fmt.Errorf("secret redacter failed: %v", err)
 		}
 	}
 
-	if a.VaultRedacter != nil {
-		s, err = a.VaultRedacter.RedactTokens(s)
+	if t.VaultRedacter != nil {
+		s, err = t.VaultRedacter.RedactTokens(s)
 		if err != nil {
 			return "", fmt.Errorf("vault redacter failed: %v", err)
 		}
@@ -111,27 +113,61 @@ func (a *Tool) RedactTokens(s string) (string, error) {
 	return s, nil
 }
 
-// UnredactTokens unredacts all tokens in the string
-func (a *Tool) UnredactTokens(s string, opts ...UnredactTokensOption) (string, error) {
+// UnredactTokens unredacts all tokens in a string
+func (t *Tool) UnredactTokens(s string, opts ...UnredactTokensOption) (string, error) {
 	var err error
 
-	if a.SecretUnredacter != nil {
+	if t.SecretUnredacter != nil {
 		sc := s
-		s, err = a.SecretUnredacter.UnredactTokens(sc, opts...)
+		s, err = t.SecretUnredacter.UnredactTokens(sc, opts...)
 		if err != nil {
 			return "", fmt.Errorf("failed to unredact secret token %v: %v", sc, err)
 		}
 	}
 
-	if a.VaultUnredacter != nil {
+	if t.VaultUnredacter != nil {
 		sc := s
-		s, err = a.VaultUnredacter.UnredactTokens(sc, opts...)
+		s, err = t.VaultUnredacter.UnredactTokens(sc, opts...)
 		if err != nil {
 			return "", fmt.Errorf("failed to unredact vault token %v: %v", sc, err)
 		}
 	}
 
 	return s, nil
+}
+
+// Exec executes a command. It acts like os.Exec,
+// but with a couple of features that are helpful
+// when working with redacted secrets:
+//
+//  1. Before running the command, redacted secrets
+//     in the environment will be unredacted.
+//
+//  2. When called with the RestartIfEnvChanges or
+//     StopIfEnvChanges option, Exec will periodically
+//     re-evaluate the environment. If the environment
+//     has changed, Exec will restart or stop the command
+//     as requested.
+func (t *Tool) Exec(name string, args []string, opts ...ExecOption) error {
+	runner := exec.NewRunner(
+		os.Stdin,
+		os.Stdout,
+		os.Environ(),
+		toolUnredactReplacer(*t),
+		name,
+		args...)
+	return Exec(runner, opts...)
+}
+
+// A toolUnredactReplacer uses a Tool to replace
+// redacted tokens with unredacted values
+type toolUnredactReplacer Tool
+
+// Replace will replace any redacted tokens
+// in the given string with unredacted values
+func (r toolUnredactReplacer) Replace(s string) (string, error) {
+	t := Tool(r)
+	return t.UnredactTokens(s)
 }
 
 func keyFromString(s string) (*[32]byte, error) {

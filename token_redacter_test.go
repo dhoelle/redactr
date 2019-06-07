@@ -7,12 +7,12 @@ import (
 	"github.com/dhoelle/redactr/fakes"
 )
 
-func TestTokenRedacter_RedactTokens(t *testing.T) {
+func TestCompositeTokenRedacter_RedactTokens(t *testing.T) {
 	t.Run("it should locate, redact, and replace tokens", func(t *testing.T) {
 		fakeRedacter := &fakes.Redacter{}
 		fakeTokenLocator := &fakes.TokenLocator{}
 		fakeTokenWrapper := &fakes.TokenWrapper{}
-		e := &redactr.TokenRedacter{
+		e := &redactr.CompositeTokenRedacter{
 			Redacter: fakeRedacter,
 			Locator:  fakeTokenLocator,
 			Wrapper:  fakeTokenWrapper,
@@ -47,11 +47,11 @@ func TestTokenRedacter_RedactTokens(t *testing.T) {
 
 		got, err := e.RedactTokens(input)
 		if err != nil {
-			t.Errorf("TokenRedacter.Redact() got err: %v", err)
+			t.Errorf("CompositeTokenRedacter.Redact() got err: %v", err)
 			return
 		}
 		if got != want {
-			t.Errorf("TokenRedacter.Redact()\n\twant %v\n\t got %v", want, got)
+			t.Errorf("CompositeTokenRedacter.Redact()\n\twant %v\n\t got %v", want, got)
 			return
 		}
 	})
@@ -59,29 +59,29 @@ func TestTokenRedacter_RedactTokens(t *testing.T) {
 	t.Run("if it doesn't locate any secrets in the input, it should return the input unchanged", func(t *testing.T) {
 		fakeTokenLocator := &fakes.TokenLocator{}
 		fakeRedacter := &fakes.Redacter{}
-		e := &redactr.TokenRedacter{
+		e := &redactr.CompositeTokenRedacter{
 			Locator:  fakeTokenLocator,
 			Redacter: fakeRedacter,
 		}
 
 		got, err := e.RedactTokens("foo")
 		if err != nil {
-			t.Errorf("TokenRedacter.Redact() got err: %v", err)
+			t.Errorf("CompositeTokenRedacter.Redact() got err: %v", err)
 			return
 		}
 		if got != "foo" {
-			t.Errorf("TokenRedacter.Redact() got %v, want %v", got, "foo")
+			t.Errorf("CompositeTokenRedacter.Redact() got %v, want %v", got, "foo")
 			return
 		}
 	})
 }
 
-func TestTokenUnredacter_UnredactTokens(t *testing.T) {
+func TestCompositeTokenUnredacter_UnredactTokens(t *testing.T) {
 	t.Run("it should locate, unredact, and replace tokens", func(t *testing.T) {
 		fakeUnredacter := &fakes.Unredacter{}
 		fakeTokenLocator := &fakes.TokenLocator{}
 		fakeTokenWrapper := &fakes.TokenWrapper{}
-		e := &redactr.TokenUnredacter{
+		e := &redactr.CompositeTokenUnredacter{
 			Unredacter: fakeUnredacter,
 			Locator:    fakeTokenLocator,
 			Wrapper:    fakeTokenWrapper,
@@ -116,11 +116,11 @@ func TestTokenUnredacter_UnredactTokens(t *testing.T) {
 		want := "foo hunter2 swordfish baz"
 		got, err := e.UnredactTokens(input)
 		if err != nil {
-			t.Errorf("TokenUnredacter.Unredact() got err: %v", err)
+			t.Errorf("CompositeTokenUnredacter.Unredact() got err: %v", err)
 			return
 		}
 		if got != want {
-			t.Errorf("TokenUnredacter.Unredact()\n\twant %v\n\t got %v", want, got)
+			t.Errorf("CompositeTokenUnredacter.Unredact()\n\twant %v\n\t got %v", want, got)
 			return
 		}
 
@@ -130,11 +130,11 @@ func TestTokenUnredacter_UnredactTokens(t *testing.T) {
 			want = "foo secret:hunter2:secret secret:swordfish:secret baz"
 			got, err = e.UnredactTokens(input, redactr.WrapTokens)
 			if err != nil {
-				t.Errorf("TokenUnredacter.Unredact() got err: %v", err)
+				t.Errorf("CompositeTokenUnredacter.Unredact() got err: %v", err)
 				return
 			}
 			if got != want {
-				t.Errorf("TokenUnredacter.Unredact()\n\twant %v\n\t got %v", want, got)
+				t.Errorf("CompositeTokenUnredacter.Unredact()\n\twant %v\n\t got %v", want, got)
 				return
 			}
 		})
@@ -143,18 +143,18 @@ func TestTokenUnredacter_UnredactTokens(t *testing.T) {
 	t.Run("if it doesn't locate any secrets in the input, it should return the input unchanged", func(t *testing.T) {
 		fakeTokenLocator := &fakes.TokenLocator{}
 		fakeUnredacter := &fakes.Unredacter{}
-		e := &redactr.TokenUnredacter{
+		e := &redactr.CompositeTokenUnredacter{
 			Locator:    fakeTokenLocator,
 			Unredacter: fakeUnredacter,
 		}
 
 		got, err := e.UnredactTokens("foo")
 		if err != nil {
-			t.Errorf("TokenUnredacter.Unredact() got err: %v", err)
+			t.Errorf("CompositeTokenUnredacter.Unredact() got err: %v", err)
 			return
 		}
 		if got != "foo" {
-			t.Errorf("TokenUnredacter.Unredact() got %v, want %v", got, "foo")
+			t.Errorf("CompositeTokenUnredacter.Unredact() got %v, want %v", got, "foo")
 			return
 		}
 	})
