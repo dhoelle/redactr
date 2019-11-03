@@ -23,7 +23,7 @@ steps:
   - name: release
     image: dhoelle/goreleaser:v0.120.5
     commands:
-      - /bin/goreleaser release -c .goreleaser-drone.yml
+      - /bin/goreleaser release
     environment:
       GITHUB_TOKEN:
         from_secret: GITHUB_TOKEN
