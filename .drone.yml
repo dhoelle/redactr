@@ -21,7 +21,7 @@ steps:
         - tag
 
   - name: release
-    image: dhoelle/goreleaser:v0.120.5
+    image: dhoelle/goreleaser:v0.106.0-dh
     commands:
       - /bin/goreleaser release
     environment:
