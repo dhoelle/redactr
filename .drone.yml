@@ -7,28 +7,26 @@ platform:
   arch: amd64
 
 steps:
-- name: test
-  image: golang:1.12
-  commands:
-  - go test -mod=vendor ./...
+  - name: test
+    image: golang:1.13
+    commands:
+      - go test -mod=vendor ./...
 
-- name: fetch
-  image: docker:git
-  commands:
-  - git fetch --tags
-  when:
-    event:
-    - tag
+  - name: fetch
+    image: docker:git
+    commands:
+      - git fetch --tags
+    when:
+      event:
+        - tag
 
-- name: release
-  image: goreleaser/goreleaser:v0.106
-  commands:
-  - /bin/goreleaser release -c .goreleaser-drone.yml
-  environment:
-    GITHUB_TOKEN:
-      from_secret: GITHUB_TOKEN
-  when:
-    event:
-    - tag
-
-...
+  - name: release
+    image: dhoelle/goreleaser:v0.120.5
+    commands:
+      - /bin/goreleaser release -c .goreleaser-drone.yml
+    environment:
+      GITHUB_TOKEN:
+        from_secret: GITHUB_TOKEN
+    when:
+      event:
+        - tag
