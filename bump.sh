@@ -59,7 +59,7 @@ esac
 NEXT="${NMAJOR}.${NMINOR}.${NPATCH}"
 echo "   next version: ${NEXT}"
 
-echo -n "git tag ${NEXT} and push (y/n)? "
+echo -n "git tag v${NEXT} and push (y/n)? "
 read answer
 if [ "$answer" = "${answer#[Yy]}" ] ;then
     echo "aborting, no tags were created"
@@ -67,7 +67,7 @@ if [ "$answer" = "${answer#[Yy]}" ] ;then
 fi
 
 git tag -a v${NEXT} -m "Version ${NEXT}"
-git push --tags
+git push origin "v${NEXT}"
 if [ ! $? -eq 0 ]; then
     echo "git push --tags failed. Fix the issue, then manually run `git push --tags`"
     exit 1
