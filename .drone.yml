@@ -23,7 +23,7 @@ steps:
   - name: release
     image: dhoelle/goreleaser:v0.106.0-dh
     commands:
-      - /bin/goreleaser release
+      - /bin/goreleaser release --debug
     environment:
       GITHUB_TOKEN:
         from_secret: GITHUB_TOKEN
