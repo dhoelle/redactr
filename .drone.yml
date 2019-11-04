@@ -37,7 +37,7 @@ steps:
       api_key:
         from_secret: github_token
       files:
-        - release/drone_*.tar.gz
-        - release/drone_checksums.txt
+        - release/redactr_*.tar.gz
+        - release/redactr_checksums.txt
     when:
       event: tag
