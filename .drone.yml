@@ -8,25 +8,38 @@ platform:
 
 steps:
   - name: test
-    image: golang:1.13
+    image: golang:1.13.4-alpine
     commands:
-      - go test -mod=vendor ./...
+      - CGO_ENABLED=0 go test -mod=vendor ./...
 
-  - name: fetch
-    image: docker:git
+  - name: build
+    image: golang:1.13.4-alpine
     commands:
-      - git fetch --tags
-    when:
-      event:
-        - tag
+      - rm -rf release
+      - sh .drone_build.sh
 
-  - name: release
-    image: dhoelle/goreleaser:v0.106.0-dh2
-    commands:
-      - /bin/goreleaser release --debug
-    environment:
-      GITHUB_TOKEN:
-        from_secret: GITHUB_TOKEN
+  - name: publish_to_docker
+    image: plugins/docker
+    settings:
+      repo: dhoelle/redactr
+      dockerfile: cmd/redactr/Dockerfile
+      auto_tag: true
+      username:
+        from_secret: docker_username
+      password:
+        from_secret: docker_password
+      registry:
+        from_secret: docker_registry
     when:
-      event:
-        - tag
+      event: [push, tag]
+
+  - name: publish_github
+    image: plugins/github-release
+    settings:
+      api_key:
+        from_secret: github_token
+      files:
+        - release/drone_*.tar.gz
+        - release/drone_checksums.txt
+    when:
+      event: tag
