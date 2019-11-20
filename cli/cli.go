@@ -1,16 +1,20 @@
 package cli
 
 import (
+	"bytes"
 	"encoding/base64"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"strings"
 
 	"github.com/dhoelle/redactr"
 	"github.com/dhoelle/redactr/aes"
 	"github.com/urfave/cli"
+
+	goexec "os/exec"
 )
 
 //go:generate gobin -m -run github.com/maxbrunsfeld/counterfeiter/v6 -o ./fakes/token_redacter_unredacter.go --fake-name TokenRedacterUnredacter . TokenRedacterUnredacter
@@ -111,6 +115,12 @@ func New(ted TokenRedacterUnredacter, execer Execer, opts ...NewOption) (*CLI, e
 			Action: unredact(ted, os.Stdin, os.Stdout),
 		},
 		{
+			Name:      "edit",
+			Usage:     "edit a redacted file",
+			UsageText: `Edit a redacted file. Secrets will be redacted again once you finish editing.`,
+			Action:    edit(ted),
+		},
+		{
 			Name:  "exec",
 			Usage: "execute a command (run `exec --help` for details)",
 			UsageText: `Execute a command, with bonus features to make it easier to work with redacted environments:
@@ -126,25 +136,25 @@ func New(ted TokenRedacterUnredacter, execer Execer, opts ...NewOption) (*CLI, e
 				# example output:
 				# my password is hunter2
 
-		2. If you set the --restart-if-env-changes or --stop-if-env-changes options, 
-		   it will periodically re-check the environment. If the environment changes 
+		2. If you set the --restart-if-env-changes or --stop-if-env-changes options,
+		   it will periodically re-check the environment. If the environment changes
 		   (e.g. a secret is updated in Vault), the command will be restarted or stopped.
 
 		   For example:
-		   
+
 				$ VAULT_ADDR=http://localhost:8222 \
 					VAULT_TOKEN=myroot \
 					SECRET_KEY=vault:secret/data/db_password#value \
 					redactr exec \
 						--restart-if-env-changes 1000ms \
 						/bin/bash -c 'echo "$(date): secret key: $SECRET_KEY"; sleep 2073600'
-			
+
 				# example output:
 				# Tue Apr 30 18:42:24 PDT 2019: secret key: swordfish
 				# Tue Apr 30 18:42:25 PDT 2019: secret key: hunter2
 				# Tue Apr 30 18:42:26 PDT 2019: secret key: swordfish
 				# ...
-				
+
 			(See https://github.com/dhoelle/redactr for complete examples)`,
 			Flags: []cli.Flag{
 				cli.DurationFlag{
@@ -231,6 +241,84 @@ func unredact(ted redactr.TokenRedacterUnredacter, in io.Reader, out io.Writer) 
 		}
 
 		fmt.Fprintln(out, unredacted)
+		return nil
+	}
+}
+
+func edit(ted redactr.TokenRedacterUnredacter) func(*cli.Context) error {
+	return func(c *cli.Context) error {
+		if !c.Args().Present() {
+			return fmt.Errorf("edit requires an argument (the file to edit)")
+		}
+		editor := os.Getenv("EDITOR")
+		if editor == "" {
+			return fmt.Errorf("EDITOR must be set")
+		}
+
+		// open and read the target
+		filename := c.Args().First()
+		f, err := os.OpenFile(filename, os.O_RDONLY|os.O_CREATE, 0666)
+		if err != nil {
+			return fmt.Errorf("failed to open %v: %v", filename, err)
+		}
+		b, err := ioutil.ReadAll(f)
+		if err != nil {
+			return fmt.Errorf("failed to read %v: %v", filename, err)
+		}
+
+		// unredact tokens in the file
+		unredacted, err := ted.UnredactTokens(string(b), redactr.WrapTokens)
+		if err != nil {
+			return fmt.Errorf("failed to unredact tokens: %v", err)
+		}
+		ur := strings.NewReader(unredacted)
+
+		// create a temporary file to edit
+		tf, err := ioutil.TempFile("", "")
+		if err != nil {
+			return fmt.Errorf("unable to open temp file: %v", err)
+		}
+		if tf != nil {
+			defer func() {
+				if err := os.Remove(tf.Name()); err != nil {
+					log.Printf("ERROR: failed to delete %v", tf.Name())
+				}
+			}()
+		}
+
+		// copy the unredacted content into the temp file
+		_, err = io.Copy(tf, ur)
+		if err != nil {
+			return fmt.Errorf("failed to populate temp file: %v", err)
+		}
+
+		// open the temporary file in the user's editor
+		cmd := goexec.Command(editor, tf.Name())
+		cmd.Stdin = os.Stdin
+		cmd.Stderr = os.Stderr
+		cmd.Stdout = os.Stdout
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to exec EDITOR (%v): %v", editor, err)
+		}
+
+		// read the contents of the temporary file again
+		b, err = ioutil.ReadFile(tf.Name())
+		if err != nil {
+			return fmt.Errorf("failed to read %v: %v", tf.Name(), err)
+		}
+
+		// redact any secret tokens
+		redacted, err := ted.RedactTokens(string(b))
+		if err != nil {
+			return fmt.Errorf("failed to redact tokens after editing: %v", err)
+		}
+
+		// write the redacted content back to the original file
+		rr := bytes.NewBufferString(redacted)
+		if err := ioutil.WriteFile(filename, rr.Bytes(), os.ModeAppend); err != nil {
+			return fmt.Errorf("failed to write redacted content back to %v: %v", filename, err)
+		}
+
 		return nil
 	}
 }
