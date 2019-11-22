@@ -6,9 +6,10 @@ import "fmt"
 // the original payload in front of it
 type TokenWrapper struct {
 	Before string
+	After  string
 }
 
 // WrapToken wraps the string with Before and After
 func (w *TokenWrapper) WrapToken(token, originalPayload, originalEnvelope string) string {
-	return fmt.Sprintf("%v%v#%v", w.Before, originalPayload, token)
+	return fmt.Sprintf("%v%v#%v%v", w.Before, originalPayload, token, w.After)
 }

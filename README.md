@@ -6,27 +6,27 @@
 
 With the right privileges, `redactr` can replace **Redacted Secrets** with **secrets**.
 
-Table of Contents
-=================
+# Table of Contents
 
-   * [redactr](#redactr)
-      * [Install](#install)
-         * [Binary](#binary)
-         * [Brew (Mac OS)](#brew-mac-os)
-         * [Build from source](#build-from-source)
-      * [Example (CLI)](#example-cli)
-         * [Redact secrets](#redact-secrets)
-         * [Unredact secrets](#unredact-secrets)
-         * [Execute commands](#execute-commands)
-            * [Re-evaluating the environment](#re-evaluating-the-environment)
-      * [Example (Docker)](#example-docker)
-      * [Supported Secret types](#supported-secret-types)
-         * [Inline encrypted secrets (AES-256-GCM)](#inline-encrypted-secrets-aes-256-gcm)
-         * [Hashicorp Vault](#hashicorp-vault)
+- [redactr](#redactr)
+  - [Install](#install)
+    - [Binary](#binary)
+    - [Brew (Mac OS)](#brew-mac-os)
+    - [Build from source](#build-from-source)
+  - [Example (CLI)](#example-cli)
+    - [Redact secrets](#redact-secrets)
+    - [Unredact secrets](#unredact-secrets)
+    - [Execute commands](#execute-commands)
+      - [Re-evaluating the environment](#re-evaluating-the-environment)
+  - [Example (Docker)](#example-docker)
+  - [Supported Secret types](#supported-secret-types)
+    - [Inline encrypted secrets (AES-256-GCM)](#inline-encrypted-secrets-aes-256-gcm)
+    - [Hashicorp Vault](#hashicorp-vault)
 
 ## Install
 
 ### Binary
+
 Binaries are available on [the releases page](https://github.com/dhoelle/redactr/releases)
 
 ### Brew (Mac OS)
@@ -39,6 +39,7 @@ brew install dhoelle/tap/redactr
 ### Build from source
 
 _Requires Go >1.11_
+
 ```sh
 go get github.com/dhoelle/redactr/cmd/redactr
 ```
@@ -57,20 +58,20 @@ export VAULT_TOKEN=my_token
 
 ```sh
 redactr redact <<EOF
-My email password is secret:hunter2:secret
-My database password is vault-secret:path/to/kv/secret#my_key#swordfish
+My email password is ~~redact:hunter2~~
+My database password is ~~redact-vault:path/to/kv/secret#my_key#swordfish~~
 EOF
 # output:
-# My email password is secret-aes-256-gcm:DYeT3hCH1unjeWl9whMhjn/ILcM3r24XaX7xgWO8sOJkvCs=:secret-aes-256-gcm
-# My database password is vault:path/to/kv/secret#my_key
+# My email password is ~~redacted-aes:DYeT3hCH1unjeWl9whMhjn/ILcM3r24XaX7xgWO8sOJkvCs=~~
+# My database password is ~~redacted-vault:path/to/kv/secret#my_key~
 ```
 
 ### Unredact secrets
 
 ```sh
 redactr unredact <<EOF
-My email password is secret-aes-256-gcm:DYeT3hCH1unjeWl9whMhjn/ILcM3r24XaX7xgWO8sOJkvCs=:secret-aes-256-gcm
-My database password is vault:path/to/kv/secret#my_key
+My email password is ~~redacted-aes:DYeT3hCH1unjeWl9whMhjn/ILcM3r24XaX7xgWO8sOJkvCs=~~
+My database password is ~~redacted-vault:path/to/kv/secret#my_key~~
 EOF
 # output:
 # My email password is hunter2
@@ -82,12 +83,12 @@ You can add it back with the `-w`/`--wrap-tokens` flag:
 
 ```sh
 redactr unredact -w <<EOF
-My email password is secret-aes-256-gcm:DYeT3hCH1unjeWl9whMhjn/ILcM3r24XaX7xgWO8sOJkvCs=:secret-aes-256-gcm
-My database password is vault:path/to/kv/secret#my_key
+My email password is ~~redacted-aes:DYeT3hCH1unjeWl9whMhjn/ILcM3r24XaX7xgWO8sOJkvCs=~~
+My database password is ~~redacted-vault:path/to/kv/secret#my_key~~
 EOF
 # output:
-# My email password is secret:hunter2:secret
-# My database password is vault-secret:path/to/kv/secret#my_key#swordfish
+# My email password is ~~redact:hunter2~~
+# My database password is ~~redact-vault:path/to/kv/secret#my_key#swordfish~~
 ```
 
 ### Execute commands
@@ -95,7 +96,7 @@ EOF
 `redactr exec` executes commands with redacted secrets in its environment
 
 ```sh
-PASSWORD="secret-aes-256-gcm:DYeT3hCH1unjeWl9whMhjn/ILcM3r24XaX7xgWO8sOJkvCs=:secret-aes-256-gcm" \
+PASSWORD="~~redacted-aes:DYeT3hCH1unjeWl9whMhjn/ILcM3r24XaX7xgWO8sOJkvCs=~~" \
 redactr exec echo 'my password is $PASSWORD'
 # output: my password is hunter2
 ```
@@ -104,7 +105,7 @@ redactr exec echo 'my password is $PASSWORD'
 
 Some `redactr` secrets are dynamic. For example, passwords in a `vault` instance can change over time.
 
-`redactr exec` can be configured to periodically unredact the 
+`redactr exec` can be configured to periodically unredact the
 secrets that a command uses and, if they have changed,
 either stop or restart the command.
 
@@ -112,7 +113,7 @@ The following example creates a local vault instance and
 changes a password every second, then runs a command with
 `redactr exec` which re-runs on each change:
 
-```
+```sh
 # Start a local vault instance
 docker run -d --cap-add=IPC_LOCK -e 'VAULT_DEV_ROOT_TOKEN_ID=myroot' -p 8222:8200 vault
 sleep 1
@@ -135,9 +136,9 @@ sleep 1
 # restart and the new secret will be printed.
 VAULT_ADDR=http://localhost:8222 \
 VAULT_TOKEN=myroot \
-SECRET_KEY=vault:secret/data/db_password#value \
+SECRET_KEY=~~redacted-vault:secret/data/db_password#value~~ \
 redactr exec \
-    -r 1000ms 
+    -r 1000ms
     /bin/bash -c 'echo "$(date): secret key: $SECRET_KEY"; sleep 3'
 
 # example output:
@@ -145,6 +146,7 @@ redactr exec \
 # Tue Apr 30 18:42:25 PDT 2019: secret key: hunter2
 # Tue Apr 30 18:42:26 PDT 2019: secret key: swordfish
 # ...
+```
 
 ## Example (Go Library)
 
@@ -163,15 +165,15 @@ func main() {
 		redactr.AESKey("xuY6/V0ZE29RtPD3TNWga/EkdU3XYsPtBIk8U4nzZyc="),
 	)
 
-	plaintext := "foo secret:hunter2:secret baz"
+	plaintext := "foo ~~redact:hunter2~~ baz"
     redacted, _ := c.RedactTokens(plaintext)
-    fmt.Println(redacted) // "foo secret-encrypted:DYeT3hCH1unjeWl9whMhjn/ILcM3r24XaX7xgWO8sOJkvCs=:secret-encrypted baz"
+    fmt.Println(redacted) // "foo secret-encrypted:DYeT3hCH1unjeWl9whMhjn/ILcM3r24XaX7xgWO8sOJkvCs=~~-encrypted baz"
 
     unredacted, _ := c.UnredactTokens(redacted)
     fmt.Println(redacted) // "foo hunter2 baz"
 
     unredacted, _ = c.UnredactTokens(redacted, redactr.WrapTokens)
-    fmt.Println(redacted) // "foo secret:hunter2:secret baz"
+    fmt.Println(redacted) // "foo ~~redact:hunter2~~ baz"
 }
 ```
 
@@ -183,7 +185,7 @@ A docker image is available: https://cloud.docker.com/repository/docker/dhoelle/
 $ docker run \
     -e AES_KEY="xuY6/V0ZE29RtPD3TNWga/EkdU3XYsPtBIk8U4nzZyc=" \
     dhoelle/redactr \
-    unredact "secret-aes-256-gcm:DYeT3hCH1unjeWl9whMhjn/ILcM3r24XaX7xgWO8sOJkvCs=:secret-aes-256-gcm"
+    unredact "~~redacted-aes:DYeT3hCH1unjeWl9whMhjn/ILcM3r24XaX7xgWO8sOJkvCs=~~"
 
 # output:
 # hunter2
@@ -191,14 +193,14 @@ $ docker run \
 
 ## Secret types
 
-| type            	| unredacted form                        	| redacted form                            	|
-|-----------------	|---------------------------------------	|-----------------------------------------	|
-| local secret    	| secret:*:secret                       	| secret-aes-256-gcm:*:secret-aes-256-gcm 	|
-| vault KV secret 	| vault-secret:path/to/secret#key#value 	| vault:path/to/secret#key                	|
+| type            | unredacted form                           | redacted form                         |
+| --------------- | ----------------------------------------- | ------------------------------------- |
+| local secret    | ~~redact:\*~~                             | ~~redacted-aes:\*~~                   |
+| vault KV secret | ~~redact-vault:path/to/secret#key#value~~ | ~~redacted-vault:path/to/secret#key~~ |
 
 ### Encrypted secrets (AES-256-GCM)
 
-Secrets can be redacted via 256-bit AES-GCM encryption. 
+Secrets can be redacted via 256-bit AES-GCM encryption.
 
 ```sh
 $ redactr key
@@ -206,15 +208,15 @@ xuY6/V0ZE29RtPD3TNWga/EkdU3XYsPtBIk8U4nzZyc=
 
 $ export AES_KEY="xuY6/V0ZE29RtPD3TNWga/EkdU3XYsPtBIk8U4nzZyc="
 
-$ redactr redact "secret:hunter2:secret"
-secret-aes-256-gcm:JOf+CmAfgyCSbesz6zstfUx7gHIuJ/JMeyyf8UqCGvkxjkc=:secret-aes-256-gcm
+$ redactr redact "~~redact:hunter2~~"
+~~redacted-aes:JOf+CmAfgyCSbesz6zstfUx7gHIuJ/JMeyyf8UqCGvkxjkc=~~
 
-$ redactr unredact "secret-aes-256-gcm:JOf+CmAfgyCSbesz6zstfUx7gHIuJ/JMeyyf8UqCGvkxjkc=:secret-aes-256-gcm"
+$ redactr unredact "~~redacted-aes:JOf+CmAfgyCSbesz6zstfUx7gHIuJ/JMeyyf8UqCGvkxjkc=~~"
 hunter2
 
 # Use the -w (--wrap) flag to return a reversible wrapped secret
-$ redactr unredact -w "secret-aes-256-gcm:JOf+CmAfgyCSbesz6zstfUx7gHIuJ/JMeyyf8UqCGvkxjkc=:secret-aes-256-gcm"
-secret:hunter2:secret
+$ redactr unredact -w "~~redacted-aes:JOf+CmAfgyCSbesz6zstfUx7gHIuJ/JMeyyf8UqCGvkxjkc=~~"
+~~redact:hunter2~~
 ```
 
 ### Hashicorp Vault
@@ -226,13 +228,13 @@ The vault adapter uses the vault CLI's standard environment variables (see: http
 Assuming vault has been appropriately configured, it can be used like:
 
 ```sh
-$ redactr redact "vault-secret:secret/dev#my_password#hunter2"
-vault:secret/dev#my_password
+$ redactr redact "~~redact-vault:/dev#my_password#hunter2~~"
+vault~~/dev#my_password
 
-$ redactr unredact "vault:secret/dev#my_password"
+$ redactr unredact "~~redacted-vault:/dev#my_password~~"
 hunter2
 
 # Use the -w (--wrap) flag to return a reversible wrapped secret
-$ redactr unredact -w "vault:secret/dev#my_password"
-vault-secret:secret/dev#my_password#hunter2
+$ redactr unredact -w "~~redacted-vault:/dev#my_password~~"
+~~redact-vault:/dev#my_password#hunter2~~
 ```

@@ -4,18 +4,15 @@ import "regexp"
 
 // RedactedRE matches redacted secret tokens, like:
 //
-//    vault:path/to/kv/secret#my_key
+//    ~~redacted-vault:path/to/kv/secret#my_key~~
 //
 // A match must be isolated by word boundaries on both ends.
 //
 // The payload (capturing group) is the secret location
 // (in the example above, "path/to/kv/secret#my_key")
 var RedactedRE = regexp.MustCompile(`` +
-	// Must start after a word boundary
-	`\b` +
-
-	// Must start with vault:
-	`vault:` +
+	// Must start with ~~redacted-vault:
+	`~~redacted-vault:` +
 
 	// Begin capturing group to capture the token
 	`(` +
@@ -34,23 +31,20 @@ var RedactedRE = regexp.MustCompile(`` +
 	// Close capturing group
 	`)` +
 
-	// Must end with a word boundary
-	`\b`)
+	// Must end with ~~
+	`~~`)
 
-// UnredactedRE matches redacted secret tokens, like:
+// UnredactedRE matches unredacted secret tokens, like:
 //
-//    vault-secret:path/to/kv/secret#my_key#my_value
+//    ~~redact-vault:path/to/kv/secret#my_key#my_value~~
 //
 // A match must be isolated by word boundaries on both ends.
 //
 // The payload (capturing group) is the secret path+key+value
 // (in the example above, "path/to/kv/secret#my_key#my_value")
 var UnredactedRE = regexp.MustCompile(`` +
-	// Must start after a word boundary
-	`\b` +
-
-	// Must start with vault:
-	`vault-secret:` +
+	// Must start with ~~redact-vault:
+	`~~redact-vault:` +
 
 	// Begin capturing group to capture the token
 	`(` +
@@ -76,5 +70,5 @@ var UnredactedRE = regexp.MustCompile(`` +
 	// Close capturing group
 	`)` +
 
-	// Must end with a word boundary
-	`\b`)
+	// Must end with ~~
+	`~~`)

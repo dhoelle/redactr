@@ -95,7 +95,7 @@ func (w *StandardClientWrapper) ReadSecret(path, key string) (interface{}, error
 	if err != nil {
 		return nil, fmt.Errorf("failed to read secret: %v", err)
 	}
-	if secret.Data == nil {
+	if secret == nil || secret.Data == nil {
 		return nil, nil
 	}
 
@@ -127,14 +127,16 @@ func (w *StandardClientWrapper) ReadSecret(path, key string) (interface{}, error
 }
 
 // WriteSecret writes a secret using the standard Vault client
+// TODO(dhoelle): this is failing if the secret does not already exist
 func (w *StandardClientWrapper) WriteSecret(path, key, value string) error {
 	// Fetch the existing vault secret, if one exists
 	secret, err := w.Client.Logical().Read(path)
 	if err != nil {
 		return fmt.Errorf("failed to read secret: %v", err)
 	}
+
 	var data map[string]interface{}
-	if secret != nil {
+	if secret != nil && secret.Data != nil {
 		data = secret.Data
 	} else {
 		data = make(map[string]interface{})

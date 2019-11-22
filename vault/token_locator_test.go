@@ -19,39 +19,39 @@ func Test_RedactedRE(t *testing.T) {
 	}{
 		{
 			name:          "simple",
-			args:          args{s: "vault:foo/bar#baz"},
-			wantEnvelopes: []string{"vault:foo/bar#baz"},
+			args:          args{s: "~~redacted-vault:foo/bar#baz~~"},
+			wantEnvelopes: []string{"~~redacted-vault:foo/bar#baz~~"},
 			wantPayloads:  []string{"foo/bar#baz"},
 		},
 		{
 			name:          "find multiple tokens",
-			args:          args{s: "asdf   vault:foo/bar#baz   vault:a/b/c#d ZZZ123!"},
-			wantEnvelopes: []string{"vault:foo/bar#baz", "vault:a/b/c#d"},
+			args:          args{s: "asdf   ~~redacted-vault:foo/bar#baz~~   ~~redacted-vault:a/b/c#d~~ ZZZ123!"},
+			wantEnvelopes: []string{"~~redacted-vault:foo/bar#baz~~", "~~redacted-vault:a/b/c#d~~"},
 			wantPayloads:  []string{"foo/bar#baz", "a/b/c#d"},
 		},
 		{
 			name:          "find tokens within json strings",
-			args:          args{s: `{"foo": "vault:foo/bar#baz"}`},
-			wantEnvelopes: []string{"vault:foo/bar#baz"},
+			args:          args{s: `{"foo": "~~redacted-vault:foo/bar#baz~~"}`},
+			wantEnvelopes: []string{"~~redacted-vault:foo/bar#baz~~"},
 			wantPayloads:  []string{"foo/bar#baz"},
 		},
 		{
 			name:          "find tokens inside single-quoted strings",
-			args:          args{s: `'vault:foo/bar#baz'`},
-			wantEnvelopes: []string{"vault:foo/bar#baz"},
+			args:          args{s: `'~~redacted-vault:foo/bar#baz~~'`},
+			wantEnvelopes: []string{"~~redacted-vault:foo/bar#baz~~"},
 			wantPayloads:  []string{"foo/bar#baz"},
 		},
 		{
 			name: "ignore tokens without a key",
-			args: args{s: "vault:foo/bar"},
+			args: args{s: "~~redacted-vault:foo/bar~~"},
 		},
 		{
 			name: "ignore tokens without a path",
-			args: args{s: "vault:#baz"},
+			args: args{s: "~~redacted-vault:#baz~~"},
 		},
 		{
 			name: "ignore tokens which span newlines",
-			args: args{s: "zzzvault:foo/bar/\n#baz"},
+			args: args{s: "zzz~~redacted-vault:foo/bar/\n#baz~~"},
 		},
 	}
 	for _, tt := range tests {

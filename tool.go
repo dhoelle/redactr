@@ -42,15 +42,15 @@ func New(opts ...NewToolOption) (*Tool, error) {
 		}
 
 		t.SecretRedacter = &CompositeTokenRedacter{
-			Locator:  &RegexTokenLocator{RE: regexp.MustCompile(`(?U)secret:(.+):secret`)},
+			Locator:  &RegexTokenLocator{RE: regexp.MustCompile(`(?U)~~redact:(.+)~~`)},
 			Redacter: &aes.Redacter{Key: key},
-			Wrapper:  &StringWrapper{Before: "secret-aes-256-gcm:", After: ":secret-aes-256-gcm"},
+			Wrapper:  &StringWrapper{Before: "~~redacted-aes:", After: "~~"},
 		}
 
 		t.SecretUnredacter = &CompositeTokenUnredacter{
-			Locator:    &RegexTokenLocator{RE: regexp.MustCompile(`(?U)secret-aes-256-gcm:(.+):secret-aes-256-gcm`)},
+			Locator:    &RegexTokenLocator{RE: regexp.MustCompile(`(?U)~~redacted-aes:(.+)~~`)},
 			Unredacter: &aes.Redacter{Key: key},
-			Wrapper:    &StringWrapper{Before: "secret:", After: ":secret"},
+			Wrapper:    &StringWrapper{Before: "~~redact:", After: "~~"},
 		}
 	}
 
@@ -66,12 +66,12 @@ func New(opts ...NewToolOption) (*Tool, error) {
 	t.VaultUnredacter = &CompositeTokenUnredacter{
 		Locator:    &RegexTokenLocator{RE: vault.RedactedRE},
 		Unredacter: vaultRedacter,
-		Wrapper:    &vault.TokenWrapper{Before: "vault-secret:"},
+		Wrapper:    &vault.TokenWrapper{Before: "~~redact-vault:", After: "~~"},
 	}
 	t.VaultRedacter = &CompositeTokenRedacter{
 		Locator:  &RegexTokenLocator{RE: vault.UnredactedRE},
 		Redacter: vaultRedacter,
-		Wrapper:  &StringWrapper{Before: "vault:"},
+		Wrapper:  &StringWrapper{Before: "~~redacted-vault:", After: "~~"},
 	}
 
 	return t, nil
