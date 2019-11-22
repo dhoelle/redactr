@@ -10,11 +10,11 @@ set -x             # print commands to the terminal
 export CGO_ENABLED=0
 
 # compile for all architectures
-GOOS=linux   GOARCH=amd64 go build -mod=vendor -ldflags "-X main.version=${DRONE_TAG##v}" -o release/linux/amd64/redactr       ./cmd/redactr
-GOOS=linux   GOARCH=arm64 go build -mod=vendor -ldflags "-X main.version=${DRONE_TAG##v}" -o release/linux/arm64/redactr       ./cmd/redactr
-GOOS=linux   GOARCH=arm   go build -mod=vendor -ldflags "-X main.version=${DRONE_TAG##v}" -o release/linux/arm/redactr         ./cmd/redactr
-GOOS=windows GOARCH=amd64 go build -mod=vendor -ldflags "-X main.version=${DRONE_TAG##v}" -o release/windows/amd64/redactr.exe ./cmd/redactr
-GOOS=darwin  GOARCH=amd64 go build -mod=vendor -ldflags "-X main.version=${DRONE_TAG##v}" -o release/darwin/amd64/redactr      ./cmd/redactr
+GOOS=linux   GOARCH=amd64 go build -mod=vendor -ldflags "-X main.version=\"${DRONE_TAG}\" -X main.date=\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" -X main.commit=\"${DRONE_COMMIT_SHA}\"" -o release/linux/amd64/redactr       ./cmd/redactr
+GOOS=linux   GOARCH=arm64 go build -mod=vendor -ldflags "-X main.version=\"${DRONE_TAG}\" -X main.date=\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" -X main.commit=\"${DRONE_COMMIT_SHA}\"" -o release/linux/arm64/redactr       ./cmd/redactr
+GOOS=linux   GOARCH=arm   go build -mod=vendor -ldflags "-X main.version=\"${DRONE_TAG}\" -X main.date=\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" -X main.commit=\"${DRONE_COMMIT_SHA}\"" -o release/linux/arm/redactr         ./cmd/redactr
+GOOS=windows GOARCH=amd64 go build -mod=vendor -ldflags "-X main.version=\"${DRONE_TAG}\" -X main.date=\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" -X main.commit=\"${DRONE_COMMIT_SHA}\"" -o release/windows/amd64/redactr.exe ./cmd/redactr
+GOOS=darwin  GOARCH=amd64 go build -mod=vendor -ldflags "-X main.version=\"${DRONE_TAG}\" -X main.date=\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" -X main.commit=\"${DRONE_COMMIT_SHA}\"" -o release/darwin/amd64/redactr      ./cmd/redactr
 
 # tar binary files prior to upload
 tar -cvzf release/redactr_linux_amd64.tar.gz   -C release/linux/amd64   redactr
